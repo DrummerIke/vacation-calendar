@@ -24,10 +24,10 @@
       gap: 10px;
       justify-content: center;
       width: 100%;
-      max-width: 800px;
+      max-width: 1000px;
     }
 
-    select, button {
+    select, button, input[type="password"] {
       padding: 10px 15px;
       font-size: 16px;
       background-color: #ef6f2e;
@@ -35,12 +35,19 @@
       border: none;
       border-radius: 8px;
       cursor: pointer;
+      transition: 0.3s;
     }
 
     select {
       background-color: #3a3330;
       border: 1px solid #777;
       color: white;
+    }
+
+    input[type="password"] {
+      background-color: #3a3330;
+      color: white;
+      border: 1px solid #777;
     }
 
     button:hover {
@@ -66,8 +73,6 @@
       display: grid;
       grid-template-rows: repeat(8, 40px);
       gap: 5px;
-      min-width: 100px;
-      max-width: 100px;
     }
 
     .day-header {
@@ -76,13 +81,10 @@
       background-color: #4b423f;
       border-radius: 5px;
       line-height: 40px;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
     }
 
     .day-header.weekend {
-      background-color: #3a3330 !important;
+      background-color: #3a3330;
     }
 
     .day-cell {
@@ -121,6 +123,7 @@
   <div class="controls">
     <select id="month-select"></select>
     <select id="year-select"></select>
+    <input id="password-input" type="password" placeholder="Пароль" />
     <button id="load-btn">Показать</button>
     <button id="save-btn">Записать</button>
     <button id="export-btn">Выгрузить в Excel</button>
@@ -246,9 +249,9 @@
     }
 
     async function saveSelected() {
-      const password = prompt("Введите пароль для записи:");
+      const password = document.getElementById('password-input').value.trim();
       if (password !== PASSWORD) {
-        alert("Неверный пароль.");
+        status.textContent = "Неверный пароль.";
         return;
       }
 
@@ -303,7 +306,7 @@
         .eq("month", month);
 
       if (error || !data) {
-        alert("Ошибка при выгрузке");
+        status.textContent = "Ошибка при выгрузке.";
         console.error(error);
         return;
       }
@@ -322,7 +325,7 @@
     loadCalendar();
   </script>
 
-  <!-- SheetJS для Excel -->
+  <!-- SheetJS -->
   <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
 </body>
 </html>
