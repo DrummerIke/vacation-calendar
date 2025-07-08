@@ -77,6 +77,9 @@
       align-items: center;
       justify-content: center;
     }
+    .day-cell.filled {
+      background-color: #ef6f2e !important;
+    }
     .day-cell select {
       width: 100%;
       height: 100%;
@@ -88,9 +91,6 @@
       background-color: white;
       color: black;
       box-sizing: border-box;
-    }
-    .filled {
-      background-color: #ef6f2e !important;
     }
     #status {
       margin-top: 15px;
@@ -137,14 +137,10 @@
       user-select: none;
       font-weight: 600;
     }
-    /* Кнопка Excel с белой стрелкой вниз */
+    /* Кнопка Excel с надписью */
     #download-btn {
-      position: relative;
       font-weight: 600;
       font-size: 16px;
-      display: flex;
-      align-items: center;
-      gap: 6px;
       background-color: #ef6f2e;
       border: none;
       border-radius: 8px;
@@ -156,11 +152,6 @@
     #download-btn:hover {
       background-color: #d65a1f;
     }
-    #download-btn::before {
-      content: "⬇️";
-      font-size: 20px;
-      line-height: 1;
-    }
   </style>
 </head>
 <body>
@@ -169,7 +160,7 @@
     <select id="year-select" aria-label="Выбор года"></select>
     <button id="load-btn" type="button">Показать</button>
     <button id="save-btn" type="button">Записать</button>
-    <button id="download-btn" type="button" title="Выгрузить в Excel"></button>
+    <button id="download-btn" type="button" title="Выгрузить в Excel">Excel</button>
   </div>
 
   <div class="calendar-wrapper" role="region" aria-label="Календарь отпусков">
@@ -313,6 +304,7 @@
       const month = +monthSelect.value;
       const selects = document.querySelectorAll(".day-cell select");
 
+      // Формируем два массива: для вставки/обновления и для удаления
       const inserts = [];
       const deletes = [];
 
@@ -329,7 +321,7 @@
       }
 
       try {
-        // Сначала удаляем очищенные записи
+        // Удаляем очищенные записи
         for (const del of deletes) {
           const { error } = await supabase
             .from("vacations")
@@ -342,9 +334,11 @@
           if (error) throw error;
         }
 
-        // Обновляем/вставляем записи
+        // Вставляем или обновляем записи (upsert)
         if (inserts.length > 0) {
-          const { error } = await supabase.from("vacations").upsert(inserts);
+          const { error } = await supabase.from("vacations").upsert(inserts, {
+            onConflict: ['year', 'month', 'day', 'slot']
+          });
           if (error) throw error;
         }
 
