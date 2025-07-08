@@ -3,9 +3,8 @@
 <head>
   <meta charset="UTF-8" />
   <title>График отпусков</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@500&display=swap" rel="stylesheet">
-  <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@500&display=swap" rel="stylesheet" />
   <style>
     body {
       font-family: 'Nunito', Arial, sans-serif;
@@ -17,7 +16,6 @@
       align-items: center;
       min-height: 100vh;
     }
-
     .controls {
       margin-bottom: 20px;
       display: flex;
@@ -27,7 +25,6 @@
       width: 100%;
       max-width: 800px;
     }
-
     select, button {
       padding: 10px 15px;
       font-size: 16px;
@@ -36,87 +33,58 @@
       border: none;
       border-radius: 8px;
       cursor: pointer;
-      transition: background-color 0.3s ease, transform 0.2s ease;
-      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
     }
-
     select {
       background-color: #3a3330;
       border: 1px solid #777;
       color: white;
     }
-
-    button:hover {
-      background-color: #d65a1f;
-      transform: translateY(-2px);
-    }
-
-    button:active {
-      transform: translateY(0);
-    }
-
     .calendar-wrapper {
       overflow-x: auto;
-      border: 1px solid #555;
       background: #2e2826;
       padding: 10px;
       border-radius: 10px;
       width: 100%;
-      max-width: 100%;
-      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
     }
-
     .calendar {
       display: grid;
       grid-auto-flow: column;
       grid-auto-columns: minmax(100px, 1fr);
       gap: 5px;
     }
-
     .day-column {
       display: grid;
       grid-template-rows: repeat(8, 40px);
       gap: 5px;
       min-width: 100px;
     }
-
     .day-header {
       text-align: center;
       font-weight: bold;
-      line-height: 40px;
       background-color: #4b423f;
       border-radius: 5px;
+      line-height: 40px;
     }
-
     .day-cell {
       background-color: #5c534f;
       border-radius: 5px;
       display: flex;
       align-items: center;
       justify-content: center;
-      padding: 5px;
     }
-
     .day-cell select {
       width: 100%;
       height: 100%;
-      padding: 2px;
-      border: none;
-      border-radius: 4px;
-      text-align: center;
       background-color: #fff;
       color: #000;
       font-size: 14px;
-      box-sizing: border-box;
+      border: none;
+      border-radius: 4px;
+      text-align: center;
     }
-
     #status {
       margin-top: 20px;
       font-weight: bold;
-      text-align: center;
-      padding: 10px;
-      border-radius: 5px;
-      min-width: 200px;
     }
   </style>
 </head>
@@ -127,149 +95,143 @@
     <button id="load-btn">Показать</button>
     <button id="save-btn">Записать</button>
   </div>
-
   <div class="calendar-wrapper">
     <div id="calendar" class="calendar"></div>
   </div>
-
   <div id="status"></div>
 
-  <script>
-    window.addEventListener('DOMContentLoaded', async () => {
-      const supabase = window.supabase.createClient(
-        'https://mhtbolnovisgdliphsmf.supabase.co',
-        'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1odGJvbG5vdmlzZ2RsaXBoc21mIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTE4Mjk1OTYsImV4cCI6MjA2NzQwNTU5Nn0.ureoaGoJ9Dsp6bRAGmqA9x0his3eRamYGs6fOXQOmB0'
-      );
+  <script type="module">
+    import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
 
-      const PASSWORD = "06062025";
-      const MONTHS = ['Январь','Февраль','Март','Апрель','Май','Июнь','Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'];
-      const monthSelect = document.getElementById('month-select');
-      const yearSelect = document.getElementById('year-select');
-      const calendarContainer = document.getElementById('calendar');
-      const status = document.getElementById('status');
+    const supabase = createClient(
+      'https://mhtbolnovisgdliphsmf.supabase.co',
+      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1odGJvbG5vdmlzZ2RsaXBoc21mIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTE4Mjk1OTYsImV4cCI6MjA2NzQwNTU5Nn0.ureoaGoJ9Dsp6bRAGmqA9x0his3eRamYGs6fOXQOmB0'
+    );
 
-      MONTHS.forEach((m, i) => {
-        monthSelect.appendChild(new Option(m, i));
+    const PASSWORD = "06062025";
+    const MONTHS = ['Январь','Февраль','Март','Апрель','Май','Июнь','Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'];
+    const monthSelect = document.getElementById('month-select');
+    const yearSelect = document.getElementById('year-select');
+    const calendarContainer = document.getElementById('calendar');
+    const status = document.getElementById('status');
+
+    MONTHS.forEach((m, i) => {
+      monthSelect.appendChild(new Option(m, i));
+    });
+    for (let y = 2025; y <= 2029; y++) {
+      yearSelect.appendChild(new Option(y, y));
+    }
+
+    const now = new Date();
+    monthSelect.value = now.getMonth();
+    yearSelect.value = now.getFullYear();
+
+    let names = [];
+    let vacations = [];
+
+    document.getElementById("load-btn").onclick = () => loadCalendar();
+    document.getElementById("save-btn").onclick = () => saveSelected();
+
+    async function loadCalendar() {
+      const year = +yearSelect.value;
+      const month = +monthSelect.value;
+      calendarContainer.innerHTML = '';
+      status.textContent = 'Загружаю...';
+
+      const [namesRes, vacsRes] = await Promise.all([
+        supabase.from('employees').select('name'),
+        supabase.from('vacations').select('*').eq('year', year).eq('month', month)
+      ]);
+
+      if (namesRes.error || vacsRes.error) {
+        status.textContent = 'Ошибка при загрузке данных';
+        console.error(namesRes.error || vacsRes.error);
+        return;
+      }
+
+      names = namesRes.data.map(n => n.name);
+      vacations = vacsRes.data;
+
+      const days = new Date(year, month + 1, 0).getDate();
+
+      for (let day = 1; day <= days; day++) {
+        const col = document.createElement('div');
+        col.className = 'day-column';
+
+        const header = document.createElement('div');
+        header.className = 'day-header';
+        header.textContent = day;
+        col.appendChild(header);
+
+        for (let slot = 0; slot < 7; slot++) {
+          const cell = document.createElement('div');
+          cell.className = 'day-cell';
+
+          const select = document.createElement('select');
+          select.dataset.day = day;
+          select.dataset.slot = slot;
+
+          select.appendChild(new Option("Выберите", ""));
+
+          names.forEach(name => {
+            select.appendChild(new Option(name, name));
+          });
+
+          const vac = vacations.find(v => v.day == day && v.slot == slot);
+          if (vac) {
+            select.value = vac.name;
+            select.disabled = true;
+          }
+
+          cell.appendChild(select);
+          col.appendChild(cell);
+        }
+
+        calendarContainer.appendChild(col);
+      }
+
+      status.textContent = '';
+    }
+
+    async function saveSelected() {
+      const password = prompt("Введите пароль для записи:");
+      if (password !== PASSWORD) {
+        alert("Неверный пароль.");
+        return;
+      }
+
+      const year = +yearSelect.value;
+      const month = +monthSelect.value;
+      const inserts = [];
+
+      document.querySelectorAll('.day-cell select').forEach(sel => {
+        if (!sel.disabled && sel.value) {
+          inserts.push({
+            year,
+            month,
+            day: +sel.dataset.day,
+            slot: +sel.dataset.slot,
+            name: sel.value
+          });
+        }
       });
 
-      for (let y = 2025; y <= 2029; y++) {
-        yearSelect.appendChild(new Option(y, y));
+      if (inserts.length === 0) {
+        status.textContent = 'Нет данных для записи.';
+        return;
       }
 
-      const now = new Date();
-      monthSelect.value = now.getMonth();
-      yearSelect.value = now.getFullYear();
-
-      document.getElementById("load-btn").onclick = () => loadCalendar();
-      document.getElementById("save-btn").onclick = () => saveSelected();
-
-      let names = [];
-      let vacations = [];
-
-      async function loadCalendar() {
-        const year = +yearSelect.value;
-        const month = +monthSelect.value;
-        calendarContainer.innerHTML = '';
-        status.textContent = 'Загружаю...';
-
-        const [namesRes, vacsRes] = await Promise.all([
-          supabase.from('employees').select('name'),
-          supabase.from('vacations').select('*').eq('year', year).eq('month', month)
-        ]);
-
-        if (namesRes.error || vacsRes.error) {
-          status.textContent = 'Ошибка при загрузке данных';
-          console.error(namesRes.error || vacsRes.error);
-          return;
-        }
-
-        names = namesRes.data.map(n => n.name);
-        vacations = vacsRes.data;
-
-        const days = new Date(year, month + 1, 0).getDate();
-
-        for (let day = 1; day <= days; day++) {
-          const col = document.createElement('div');
-          col.className = 'day-column';
-
-          const header = document.createElement('div');
-          header.className = 'day-header';
-          header.textContent = day;
-          col.appendChild(header);
-
-          for (let slot = 0; slot < 7; slot++) {
-            const cell = document.createElement('div');
-            cell.className = 'day-cell';
-
-            const select = document.createElement('select');
-            select.dataset.day = day;
-            select.dataset.slot = slot;
-
-            select.appendChild(new Option("Выберите", ""));
-
-            names.forEach(name => {
-              select.appendChild(new Option(name, name));
-            });
-
-            const vac = vacations.find(v => v.day == day && v.slot == slot);
-            if (vac) {
-              select.value = vac.name;
-              select.disabled = true;
-            }
-
-            cell.appendChild(select);
-            col.appendChild(cell);
-          }
-
-          calendarContainer.appendChild(col);
-        }
-
-        status.textContent = '';
+      const { error } = await supabase.from('vacations').upsert(inserts);
+      if (error) {
+        status.textContent = 'Ошибка при сохранении.';
+        console.error(error);
+      } else {
+        status.textContent = '✅ Успешно сохранено!';
+        loadCalendar();
       }
+    }
 
-      async function saveSelected() {
-        const password = prompt("Введите пароль для записи:");
-        if (password !== PASSWORD) {
-          alert("Неверный пароль.");
-          return;
-        }
-
-        const year = +yearSelect.value;
-        const month = +monthSelect.value;
-        const inserts = [];
-
-        document.querySelectorAll('.day-cell select').forEach(sel => {
-          if (!sel.disabled && sel.value) {
-            inserts.push({
-              year,
-              month,
-              day: +sel.dataset.day,
-              slot: +sel.dataset.slot,
-              name: sel.value
-            });
-          }
-        });
-
-        if (inserts.length === 0) {
-          status.textContent = 'Нет данных для записи.';
-          return;
-        }
-
-        const { error } = await supabase.from('vacations').upsert(inserts);
-
-        if (error) {
-          status.textContent = 'Ошибка при сохранении.';
-          console.error(error);
-        } else {
-          status.textContent = '✅ Успешно сохранено!';
-          loadCalendar();
-        }
-      }
-
-      // Начальная загрузка
-      loadCalendar();
-    });
+    loadCalendar();
   </script>
 </body>
 </html>
-
