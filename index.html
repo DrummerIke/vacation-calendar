@@ -3,17 +3,19 @@
 <head>
   <meta charset="UTF-8" />
   <title>График отпусков</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@500&display=swap" rel="stylesheet" />
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
   <style>
     body {
-      font-family: 'Nunito', sans-serif;
+      font-family: 'Nunito', Arial, sans-serif;
       margin: 20px;
       background-color: #3a3330;
       color: white;
       display: flex;
       flex-direction: column;
       align-items: center;
+      min-height: 100vh;
     }
     .controls {
       margin-bottom: 20px;
@@ -21,51 +23,62 @@
       flex-wrap: wrap;
       gap: 10px;
       justify-content: center;
+      width: 100%;
+      max-width: 900px;
     }
     select, button {
       padding: 10px 15px;
       font-size: 16px;
-      border-radius: 8px;
-      border: none;
       background-color: #ef6f2e;
       color: white;
+      border: none;
+      border-radius: 8px;
       cursor: pointer;
-      transition: background-color 0.3s ease;
+      transition: background-color 0.3s ease, transform 0.2s ease;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
       user-select: none;
     }
     select {
       background-color: #3a3330;
       border: 1px solid #777;
       color: white;
+      user-select: auto;
     }
     button:hover {
       background-color: #d65a1f;
+      transform: translateY(-2px);
+    }
+    button:active {
+      transform: translateY(0);
     }
     .calendar-wrapper {
       overflow-x: auto;
+      border: 1px solid #555;
+      background: #2e2826;
+      padding: 10px;
+      border-radius: 10px;
       width: 100%;
       max-width: 100%;
-      border: 1px solid #555;
-      background-color: #2e2826;
-      border-radius: 10px;
-      padding: 10px;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
     }
     .calendar {
       display: grid;
       grid-auto-flow: column;
-      grid-auto-columns: 100px;
+      grid-auto-columns: minmax(100px, 1fr);
+      gap: 5px;
     }
     .day-column {
       display: grid;
       grid-template-rows: repeat(8, 40px);
       gap: 5px;
+      min-width: 100px;
     }
     .day-header {
-      background-color: #4b423f;
       text-align: center;
+      font-weight: bold;
       line-height: 40px;
       border-radius: 5px;
-      font-weight: bold;
+      user-select: none;
     }
     .weekend {
       background-color: #3a3330 !important;
@@ -76,9 +89,11 @@
       display: flex;
       align-items: center;
       justify-content: center;
+      padding: 5px;
+      box-sizing: border-box;
     }
     .day-cell.filled {
-      background-color: #ef6f2e !important;
+      background-color: #ef6f2e;
     }
     .day-cell select {
       width: 100%;
@@ -87,307 +102,295 @@
       border: none;
       border-radius: 4px;
       text-align: center;
+      background-color: #fff;
+      color: #000;
       font-size: 14px;
-      background-color: white;
-      color: black;
       box-sizing: border-box;
+      cursor: grab;
     }
     #status {
-      margin-top: 15px;
+      margin-top: 20px;
       font-weight: bold;
       text-align: center;
-    }
-    /* Модальное окно */
-    #modal-overlay {
-      display: none;
-      position: fixed;
-      top: 0; left: 0;
-      width: 100%; height: 100%;
-      background: rgba(0, 0, 0, 0.6);
-      justify-content: center;
-      align-items: center;
-      z-index: 1000;
-    }
-    #modal-overlay.active {
-      display: flex;
-    }
-    #modal-box {
-      background: white;
-      padding: 20px;
-      border-radius: 10px;
-      color: black;
-      text-align: center;
-      min-width: 280px;
-    }
-    #modal-box input {
       padding: 10px;
-      margin: 10px 0;
-      width: 100%;
-      box-sizing: border-box;
-      font-size: 16px;
-    }
-    #modal-box button {
-      margin: 5px;
-      background-color: #ef6f2e;
-      color: white;
-      border: none;
-      border-radius: 6px;
-      padding: 8px 12px;
-      cursor: pointer;
-      user-select: none;
-      font-weight: 600;
-    }
-    /* Кнопка Excel с надписью */
-    #download-btn {
-      font-weight: 600;
-      font-size: 16px;
-      background-color: #ef6f2e;
-      border: none;
-      border-radius: 8px;
-      color: white;
-      cursor: pointer;
-      padding: 10px 15px;
-      user-select: none;
-    }
-    #download-btn:hover {
-      background-color: #d65a1f;
+      border-radius: 5px;
+      min-width: 200px;
     }
   </style>
 </head>
 <body>
+
   <div class="controls">
-    <select id="month-select" aria-label="Выбор месяца"></select>
-    <select id="year-select" aria-label="Выбор года"></select>
-    <button id="load-btn" type="button">Показать</button>
-    <button id="save-btn" type="button">Записать</button>
-    <button id="download-btn" type="button" title="Выгрузить в Excel">Excel</button>
+    <select id="month-select"></select>
+    <select id="year-select"></select>
+    <button id="load-btn">Показать</button>
+    <button id="save-btn">Записать</button>
+    <button id="export-btn">Excel</button>
   </div>
 
-  <div class="calendar-wrapper" role="region" aria-label="Календарь отпусков">
+  <div class="calendar-wrapper">
     <div id="calendar" class="calendar"></div>
   </div>
 
-  <div id="status" role="alert" aria-live="polite"></div>
+  <div id="status"></div>
 
-  <div id="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="modal-title">
-    <div id="modal-box">
-      <p id="modal-title">Введите пароль для записи:</p>
-      <input type="password" id="modal-password" autocomplete="off" />
-      <div>
-        <button id="confirm-password" type="button">Подтвердить</button>
-        <button id="cancel-password" type="button">Отмена</button>
-      </div>
-    </div>
-  </div>
-
-  <script type="module">
-    import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
-
-    const supabase = createClient(
+  <script>
+    const supabase = supabase.createClient(
       'https://mhtbolnovisgdliphsmf.supabase.co',
-      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1odGJvbG5vdmlzZ2RsaXBoc21mIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTE4Mjk1OTYsImV4cCI6MjA2NzQwNTU5Nn0.ureoaGoJ9Dsp6bRAGmqA9x0his3eRamYGs6fOXQOmB0'
+      'YOUR_ANON_KEY_HERE' // оставь свой anon ключ
     );
 
     const PASSWORD = "06062025";
     const MONTHS = ['Январь','Февраль','Март','Апрель','Май','Июнь','Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'];
 
-    const monthSelect = document.getElementById("month-select");
-    const yearSelect = document.getElementById("year-select");
-    const calendar = document.getElementById("calendar");
-    const status = document.getElementById("status");
-    const modalOverlay = document.getElementById("modal-overlay");
-    const modalPasswordInput = document.getElementById("modal-password");
-    const confirmPasswordBtn = document.getElementById("confirm-password");
-    const cancelPasswordBtn = document.getElementById("cancel-password");
+    const monthSelect = document.getElementById('month-select');
+    const yearSelect = document.getElementById('year-select');
+    const calendarContainer = document.getElementById('calendar');
+    const status = document.getElementById('status');
 
     let names = [];
+    let vacations = [];
 
+    // Заполняем селекты месяц/год
     MONTHS.forEach((m, i) => monthSelect.appendChild(new Option(m, i)));
     for (let y = 2025; y <= 2029; y++) yearSelect.appendChild(new Option(y, y));
 
-    document.getElementById("load-btn").onclick = loadCalendar;
+    monthSelect.value = new Date().getMonth();
+    yearSelect.value = new Date().getFullYear();
 
-    document.getElementById("save-btn").onclick = () => {
-      modalPasswordInput.value = "";
-      modalOverlay.classList.add("active");
-      modalPasswordInput.focus();
-    };
+    document.getElementById("load-btn").onclick = () => loadCalendar();
+    document.getElementById("save-btn").onclick = () => saveSelected();
+    document.getElementById("export-btn").onclick = () => exportToExcel();
 
-    confirmPasswordBtn.onclick = async () => {
-      const password = modalPasswordInput.value.trim();
-      if (password !== PASSWORD) {
-        status.textContent = "Неверный пароль";
-        modalOverlay.classList.remove("active");
-        return;
-      }
-      modalOverlay.classList.remove("active");
-      await saveSelected();
-    };
-
-    cancelPasswordBtn.onclick = () => {
-      modalOverlay.classList.remove("active");
-    };
-
-    document.getElementById("download-btn").onclick = downloadExcel;
-
+    // Загрузка календаря
     async function loadCalendar() {
       const year = +yearSelect.value;
       const month = +monthSelect.value;
-      calendar.innerHTML = "";
-      status.textContent = "Загружаю...";
+      calendarContainer.innerHTML = '';
+      status.textContent = 'Загружаю...';
 
       try {
-        const { data: nameData, error: errNames } = await supabase.from("employees").select("name");
-        const { data: vacs, error: errVacs } = await supabase
-          .from("vacations")
-          .select("*")
-          .eq("year", year)
-          .eq("month", month);
+        const [namesRes, vacsRes] = await Promise.all([
+          supabase.from('employees').select('name'),
+          supabase.from('vacations').select('*').eq('year', year).eq('month', month),
+        ]);
 
-        if (errNames || errVacs) throw new Error("Ошибка при загрузке данных");
+        if (namesRes.error || vacsRes.error) throw new Error('Ошибка при загрузке данных');
 
-        names = nameData?.map(e => e.name) || [];
-        const daysInMonth = new Date(year, month + 1, 0).getDate();
+        names = namesRes.data.map(n => n.name);
+        vacations = vacsRes.data;
 
-        for (let d = 1; d <= daysInMonth; d++) {
-          const col = document.createElement("div");
-          col.className = "day-column";
+        const days = new Date(year, month + 1, 0).getDate();
 
-          const date = new Date(year, month, d);
-          const day = date.getDay();
-          const header = document.createElement("div");
-          header.className = "day-header";
-          if (day === 0 || day === 6) header.classList.add("weekend");
-          header.textContent = d;
+        // Создаем календарь по дням
+        for (let day = 1; day <= days; day++) {
+          const col = document.createElement('div');
+          col.className = 'day-column';
+
+          const header = document.createElement('div');
+          header.className = 'day-header';
+          header.textContent = day;
+
+          // Покрасить в выходной, если суббота или воскресенье
+          const dayOfWeek = new Date(year, month, day).getDay();
+          if (dayOfWeek === 0 || dayOfWeek === 6) {
+            header.classList.add('weekend');
+          }
+
           col.appendChild(header);
 
           for (let slot = 0; slot < 7; slot++) {
-            const cell = document.createElement("div");
-            cell.className = "day-cell";
+            const cell = document.createElement('div');
+            cell.className = 'day-cell';
 
-            const select = document.createElement("select");
-            select.dataset.day = d;
+            const select = document.createElement('select');
+            select.dataset.day = day;
             select.dataset.slot = slot;
+            select.setAttribute('draggable', 'true');
+            select.title = 'Перетащи сюда или выбери фамилию';
 
-            select.appendChild(new Option("Выберите", ""));
-            select.appendChild(new Option("Очистить", "CLEAR"));
-            names.forEach(name => select.appendChild(new Option(name, name)));
+            select.appendChild(new Option("Очистить", ""));
 
-            const found = vacs?.find(v => v.day === d && v.slot === slot);
-            if (found) {
-              select.value = found.name;
-              cell.classList.add("filled");
+            names.forEach(name => {
+              select.appendChild(new Option(name, name));
+            });
+
+            const vac = vacations.find(v => v.day == day && v.slot == slot);
+            if (vac) {
+              select.value = vac.name;
+              // Не блокируем для возможности перезаписи
+              cell.classList.add('filled');
             }
-
-            select.onchange = () => {
-              if (select.value && select.value !== "CLEAR") {
-                cell.classList.add("filled");
-              } else {
-                cell.classList.remove("filled");
-              }
-            };
 
             cell.appendChild(select);
             col.appendChild(cell);
           }
-          calendar.appendChild(col);
+
+          calendarContainer.appendChild(col);
         }
-        status.textContent = "";
-      } catch (error) {
-        status.textContent = "Ошибка при загрузке данных";
-        console.error(error);
+
+        status.textContent = '';
+      } catch (e) {
+        status.textContent = 'Ошибка при загрузке данных';
+        console.error(e);
       }
     }
 
+    // Сохранение выбранных значений
     async function saveSelected() {
-      const year = +yearSelect.value;
-      const month = +monthSelect.value;
-      const selects = document.querySelectorAll(".day-cell select");
-
-      // Формируем два массива: для вставки/обновления и для удаления
-      const inserts = [];
-      const deletes = [];
-
-      for (const sel of selects) {
-        const day = +sel.dataset.day;
-        const slot = +sel.dataset.slot;
-        const name = sel.value;
-
-        if (name === "CLEAR") {
-          deletes.push({ day, slot });
-        } else if (name && name !== "") {
-          inserts.push({ year, month, day, slot, name });
-        }
+      const password = prompt("Введите пароль для записи:");
+      if (password !== PASSWORD) {
+        alert("Неверный пароль.");
+        return;
       }
 
-      try {
-        // Удаляем очищенные записи
-        for (const del of deletes) {
-          const { error } = await supabase
-            .from("vacations")
-            .delete()
-            .eq("year", year)
-            .eq("month", month)
-            .eq("day", del.day)
-            .eq("slot", del.slot);
+      const year = +yearSelect.value;
+      const month = +monthSelect.value;
+      const inserts = [];
 
-          if (error) throw error;
-        }
-
-        // Вставляем или обновляем записи (upsert)
-        if (inserts.length > 0) {
-          const { error } = await supabase.from("vacations").upsert(inserts, {
-            onConflict: ['year', 'month', 'day', 'slot']
+      document.querySelectorAll('.day-cell select').forEach(sel => {
+        if (sel.value) {
+          inserts.push({
+            year,
+            month,
+            day: +sel.dataset.day,
+            slot: +sel.dataset.slot,
+            name: sel.value
           });
+        } else {
+          // Если выбрано Очистить, удаляем запись из БД
+          inserts.push({
+            year,
+            month,
+            day: +sel.dataset.day,
+            slot: +sel.dataset.slot,
+            name: null
+          });
+        }
+      });
+
+      try {
+        // Удаляем записи, где name = null
+        for (const item of inserts.filter(i => i.name === null)) {
+          const { error } = await supabase
+            .from('vacations')
+            .delete()
+            .eq('year', item.year)
+            .eq('month', item.month)
+            .eq('day', item.day)
+            .eq('slot', item.slot);
           if (error) throw error;
         }
 
-        status.textContent = "✅ Успешно сохранено!";
-        await loadCalendar();
-      } catch (error) {
-        status.textContent = "Ошибка при записи";
-        console.error(error);
+        // Обновляем/вставляем остальные
+        const upsertData = inserts.filter(i => i.name !== null);
+
+        if (upsertData.length > 0) {
+          const { error } = await supabase
+            .from('vacations')
+            .upsert(upsertData, { onConflict: ['year', 'month', 'day', 'slot'] });
+          if (error) throw error;
+        }
+
+        status.textContent = '✅ Успешно сохранено!';
+        loadCalendar();
+      } catch (e) {
+        status.textContent = 'Ошибка при сохранении.';
+        console.error(e);
       }
     }
 
-    async function downloadExcel() {
-      const year = +yearSelect.value;
-      const month = +monthSelect.value;
+    // Перетаскивание значений фамилий между select
+    calendarContainer.addEventListener('dragstart', e => {
+      if (e.target.tagName === 'SELECT') {
+        e.dataTransfer.setData('text/plain', e.target.value);
+      }
+    });
+
+    calendarContainer.addEventListener('dragover', e => {
+      if (e.target.tagName === 'SELECT') {
+        e.preventDefault();
+      }
+    });
+
+    calendarContainer.addEventListener('drop', e => {
+      if (e.target.tagName === 'SELECT') {
+        const val = e.dataTransfer.getData('text/plain');
+        e.target.value = val;
+
+        // Добавляем/удаляем класс заливки по значению
+        const parentCell = e.target.closest('.day-cell');
+        if (val) parentCell.classList.add('filled');
+        else parentCell.classList.remove('filled');
+
+        e.preventDefault();
+      }
+    });
+
+    // Экспорт в Excel с агрегацией по сотрудникам
+    async function exportToExcel() {
+      status.textContent = 'Генерируем Excel...';
+
       try {
-        const { data, error } = await supabase
-          .from("vacations")
-          .select("*")
-          .eq("year", year)
-          .eq("month", month);
+        const year = +yearSelect.value;
+        const month = +monthSelect.value;
+
+        // Загружаем все отпуска для месяца
+        const { data: vacs, error } = await supabase
+          .from('vacations')
+          .select('*')
+          .eq('year', year)
+          .eq('month', month);
 
         if (error) throw error;
 
-        const rows = [
-          ["Год", "Месяц", "День", "Слот", "Фамилия"],
-          ...data.map(r => [r.year, r.month + 1, r.day, r.slot + 1, r.name]),
-        ];
+        if (!vacs.length) {
+          alert('Нет данных для экспорта.');
+          status.textContent = '';
+          return;
+        }
 
-        const csv = rows.map(r => r.join(",")).join("\n");
-        const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
-        const url = URL.createObjectURL(blob);
+        // Группируем по фамилии
+        const grouped = {};
+        vacs.forEach(vac => {
+          const key = vac.name;
+          if (!grouped[key]) {
+            grouped[key] = { name: vac.name, startDay: vac.day, endDay: vac.day };
+          } else {
+            if (vac.day < grouped[key].startDay) grouped[key].startDay = vac.day;
+            if (vac.day > grouped[key].endDay) grouped[key].endDay = vac.day;
+          }
+        });
 
-        const a = document.createElement("a");
-        a.href = url;
-        a.download = `otpuska_${year}_${month + 1}.csv`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-      } catch (error) {
-        status.textContent = "Ошибка при выгрузке Excel";
-        console.error(error);
+        // Формируем массив для Excel
+        const rows = [];
+        for (const key in grouped) {
+          rows.push({
+            Фамилия: grouped[key].name,
+            Месяц: MONTHS[month],
+            Начало_отпуска: grouped[key].startDay,
+            Конец_отпуска: grouped[key].endDay,
+          });
+        }
+
+        // Создаём книгу Excel
+        const ws = XLSX.utils.json_to_sheet(rows);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, "Отпуска");
+
+        // Генерируем и скачиваем файл
+        XLSX.writeFile(wb, `vacations_${year}_${month + 1}.xlsx`);
+
+        status.textContent = 'Excel экспорт завершён.';
+      } catch (e) {
+        alert('Ошибка при экспорте в Excel.');
+        console.error(e);
+        status.textContent = '';
       }
     }
 
+    // Инициализация страницы — загрузка календаря
     window.onload = () => {
-      const now = new Date();
-      monthSelect.value = now.getMonth();
-      yearSelect.value = now.getFullYear();
       loadCalendar();
     };
   </script>
