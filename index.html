@@ -5,12 +5,12 @@
   <title>График отпусков</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@500&display=swap" rel="stylesheet">
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
   <style>
     body {
       font-family: 'Nunito', Arial, sans-serif;
       margin: 20px;
-      background-color: transparent;
+      background-color: #3a3330;
       color: white;
       display: flex;
       flex-direction: column;
@@ -121,7 +121,6 @@
   </style>
 </head>
 <body>
-
   <div class="controls">
     <select id="month-select"></select>
     <select id="year-select"></select>
@@ -136,138 +135,141 @@
   <div id="status"></div>
 
   <script>
-    const supabase = supabase.createClient(
-      'https://mhtbolnovisgdliphsmf.supabase.co',
-      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1odGJvbG5vdmlzZ2RsaXBoc21mIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTE4Mjk1OTYsImV4cCI6MjA2NzQwNTU5Nn0.ureoaGoJ9Dsp6bRAGmqA9x0his3eRamYGs6fOXQOmB0'
-    );
+    window.addEventListener('DOMContentLoaded', async () => {
+      const supabase = window.supabase.createClient(
+        'https://mhtbolnovisgdliphsmf.supabase.co',
+        'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1odGJvbG5vdmlzZ2RsaXBoc21mIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTE4Mjk1OTYsImV4cCI6MjA2NzQwNTU5Nn0.ureoaGoJ9Dsp6bRAGmqA9x0his3eRamYGs6fOXQOmB0'
+      );
 
-    const PASSWORD = "06062025";
-    const monthSelect = document.getElementById('month-select');
-    const yearSelect = document.getElementById('year-select');
-    const calendarContainer = document.getElementById('calendar');
-    const status = document.getElementById('status');
+      const PASSWORD = "06062025";
+      const MONTHS = ['Январь','Февраль','Март','Апрель','Май','Июнь','Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'];
+      const monthSelect = document.getElementById('month-select');
+      const yearSelect = document.getElementById('year-select');
+      const calendarContainer = document.getElementById('calendar');
+      const status = document.getElementById('status');
 
-    const MONTHS = ['Январь','Февраль','Март','Апрель','Май','Июнь','Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'];
-
-    let names = [];
-    let vacations = [];
-
-    MONTHS.forEach((m, i) => {
-      monthSelect.appendChild(new Option(m, i));
-    });
-
-    for (let y = 2025; y <= 2029; y++) {
-      yearSelect.appendChild(new Option(y, y));
-    }
-
-    monthSelect.value = new Date().getMonth();
-    yearSelect.value = new Date().getFullYear();
-
-    document.getElementById("load-btn").onclick = loadCalendar;
-    document.getElementById("save-btn").onclick = saveSelected;
-
-    window.onload = loadCalendar;
-
-    async function loadCalendar() {
-      const year = +yearSelect.value;
-      const month = +monthSelect.value;
-      calendarContainer.innerHTML = '';
-      status.textContent = 'Загружаю...';
-
-      const [namesRes, vacsRes] = await Promise.all([
-        supabase.from('employees').select('name'),
-        supabase.from('vacations').select('*').eq('year', year).eq('month', month)
-      ]);
-
-      if (namesRes.error || vacsRes.error) {
-        status.textContent = 'Ошибка при загрузке данных';
-        console.error(namesRes.error || vacsRes.error);
-        return;
-      }
-
-      names = namesRes.data.map(n => n.name);
-      vacations = vacsRes.data;
-
-      const days = new Date(year, month + 1, 0).getDate();
-
-      for (let day = 1; day <= days; day++) {
-        const col = document.createElement('div');
-        col.className = 'day-column';
-
-        const header = document.createElement('div');
-        header.className = 'day-header';
-        header.textContent = day;
-        col.appendChild(header);
-
-        for (let slot = 0; slot < 7; slot++) {
-          const cell = document.createElement('div');
-          cell.className = 'day-cell';
-
-          const select = document.createElement('select');
-          select.dataset.day = day;
-          select.dataset.slot = slot;
-
-          select.appendChild(new Option("Выберите", ""));
-
-          names.forEach(name => {
-            select.appendChild(new Option(name, name));
-          });
-
-          const vac = vacations.find(v => v.day == day && v.slot == slot);
-          if (vac) {
-            select.value = vac.name;
-            select.disabled = true;
-          }
-
-          cell.appendChild(select);
-          col.appendChild(cell);
-        }
-
-        calendarContainer.appendChild(col);
-      }
-
-      status.textContent = '';
-    }
-
-    async function saveSelected() {
-      const password = prompt("Введите пароль для записи:");
-      if (password !== PASSWORD) {
-        alert("Неверный пароль.");
-        return;
-      }
-
-      const year = +yearSelect.value;
-      const month = +monthSelect.value;
-      const inserts = [];
-
-      document.querySelectorAll('.day-cell select').forEach(sel => {
-        if (!sel.disabled && sel.value) {
-          inserts.push({
-            year,
-            month,
-            day: +sel.dataset.day,
-            slot: +sel.dataset.slot,
-            name: sel.value
-          });
-        }
+      MONTHS.forEach((m, i) => {
+        monthSelect.appendChild(new Option(m, i));
       });
 
-      if (inserts.length === 0) {
-        status.textContent = 'Нет данных для записи.';
-        return;
+      for (let y = 2025; y <= 2029; y++) {
+        yearSelect.appendChild(new Option(y, y));
       }
 
-      const { error } = await supabase.from('vacations').upsert(inserts);
+      const now = new Date();
+      monthSelect.value = now.getMonth();
+      yearSelect.value = now.getFullYear();
 
-      if (error) {
-        status.textContent = 'Ошибка при сохранении.';
-        console.error(error);
-      } else {
-        status.textContent = '✅ Успешно сохранено!';
-        loadCalendar();
+      document.getElementById("load-btn").onclick = () => loadCalendar();
+      document.getElementById("save-btn").onclick = () => saveSelected();
+
+      let names = [];
+      let vacations = [];
+
+      async function loadCalendar() {
+        const year = +yearSelect.value;
+        const month = +monthSelect.value;
+        calendarContainer.innerHTML = '';
+        status.textContent = 'Загружаю...';
+
+        const [namesRes, vacsRes] = await Promise.all([
+          supabase.from('employees').select('name'),
+          supabase.from('vacations').select('*').eq('year', year).eq('month', month)
+        ]);
+
+        if (namesRes.error || vacsRes.error) {
+          status.textContent = 'Ошибка при загрузке данных';
+          console.error(namesRes.error || vacsRes.error);
+          return;
+        }
+
+        names = namesRes.data.map(n => n.name);
+        vacations = vacsRes.data;
+
+        const days = new Date(year, month + 1, 0).getDate();
+
+        for (let day = 1; day <= days; day++) {
+          const col = document.createElement('div');
+          col.className = 'day-column';
+
+          const header = document.createElement('div');
+          header.className = 'day-header';
+          header.textContent = day;
+          col.appendChild(header);
+
+          for (let slot = 0; slot < 7; slot++) {
+            const cell = document.createElement('div');
+            cell.className = 'day-cell';
+
+            const select = document.createElement('select');
+            select.dataset.day = day;
+            select.dataset.slot = slot;
+
+            select.appendChild(new Option("Выберите", ""));
+
+            names.forEach(name => {
+              select.appendChild(new Option(name, name));
+            });
+
+            const vac = vacations.find(v => v.day == day && v.slot == slot);
+            if (vac) {
+              select.value = vac.name;
+              select.disabled = true;
+            }
+
+            cell.appendChild(select);
+            col.appendChild(cell);
+          }
+
+          calendarContainer.appendChild(col);
+        }
+
+        status.textContent = '';
       }
-    }
+
+      async function saveSelected() {
+        const password = prompt("Введите пароль для записи:");
+        if (password !== PASSWORD) {
+          alert("Неверный пароль.");
+          return;
+        }
+
+        const year = +yearSelect.value;
+        const month = +monthSelect.value;
+        const inserts = [];
+
+        document.querySelectorAll('.day-cell select').forEach(sel => {
+          if (!sel.disabled && sel.value) {
+            inserts.push({
+              year,
+              month,
+              day: +sel.dataset.day,
+              slot: +sel.dataset.slot,
+              name: sel.value
+            });
+          }
+        });
+
+        if (inserts.length === 0) {
+          status.textContent = 'Нет данных для записи.';
+          return;
+        }
+
+        const { error } = await supabase.from('vacations').upsert(inserts);
+
+        if (error) {
+          status.textContent = 'Ошибка при сохранении.';
+          console.error(error);
+        } else {
+          status.textContent = '✅ Успешно сохранено!';
+          loadCalendar();
+        }
+      }
+
+      // Начальная загрузка
+      loadCalendar();
+    });
   </script>
-
 </body>
 </html>
+
