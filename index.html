@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8" />
   <title>График отпусков</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@500&display=swap" rel="stylesheet">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@500&display=swap" rel="stylesheet" />
   <style>
     body {
       font-family: 'Nunito', sans-serif;
@@ -110,57 +110,52 @@
       text-align: center;
     }
 
-    .download-btn {
-      background-color: #0077cc;
-    }
-
     #modal-overlay {
       display: none;
       position: fixed;
-      top:0;
-      left:0;
-      width:100%;
-      height:100%;
-      background:rgba(0,0,0,0.6);
-      display:flex;
-      justify-content:center;
-      align-items:center;
-      z-index:1000;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.6);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 1000;
     }
 
     #modal-box {
-      background:white;
-      padding:20px;
-      border-radius:10px;
-      color:black;
-      text-align:center;
+      background: white;
+      padding: 20px;
+      border-radius: 10px;
+      color: black;
+      text-align: center;
     }
 
     #modal-box input {
-      padding:10px;
-      margin:10px 0;
+      padding: 10px;
+      margin: 10px 0;
       width: 200px;
     }
 
     #modal-box button {
       margin: 5px;
-      background-color:#ef6f2e;
-      color:white;
-      border:none;
-      border-radius:6px;
-      padding:8px 12px;
-      cursor:pointer;
+      background-color: #ef6f2e;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      padding: 8px 12px;
+      cursor: pointer;
     }
   </style>
 </head>
 <body>
-
   <div class="controls">
     <select id="month-select"></select>
     <select id="year-select"></select>
     <button id="load-btn">Показать</button>
     <button id="save-btn">Записать</button>
-    <button id="download-btn" class="download-btn">⬇️ Excel</button>
+    <button id="download-btn">⬇️ Excel</button>
   </div>
 
   <div class="calendar-wrapper">
@@ -198,16 +193,8 @@
 
     let names = [];
 
-    MONTHS.forEach((m, i) => {
-      const option = document.createElement("option");
-      option.value = i;
-      option.textContent = m;
-      monthSelect.appendChild(option);
-    });
-
-    for (let y = 2025; y <= 2029; y++) {
-      yearSelect.appendChild(new Option(y, y));
-    }
+    MONTHS.forEach((m, i) => monthSelect.appendChild(new Option(m, i)));
+    for (let y = 2025; y <= 2029; y++) yearSelect.appendChild(new Option(y, y));
 
     document.getElementById("load-btn").onclick = loadCalendar;
     document.getElementById("save-btn").onclick = () => {
@@ -238,13 +225,13 @@
       status.textContent = "Загружаю...";
 
       const { data: nameData } = await supabase.from("employees").select("name");
-      const { data: vacs } = await supabase.from("vacations")
+      const { data: vacs } = await supabase
+        .from("vacations")
         .select("*")
         .eq("year", year)
         .eq("month", month);
 
       names = nameData?.map(e => e.name) || [];
-
       const daysInMonth = new Date(year, month + 1, 0).getDate();
 
       for (let d = 1; d <= daysInMonth; d++) {
@@ -268,9 +255,7 @@
 
           select.appendChild(new Option("Выберите", ""));
           select.appendChild(new Option("Очистить", "CLEAR"));
-          names.forEach(name => {
-            select.appendChild(new Option(name, name));
-          });
+          names.forEach(name => select.appendChild(new Option(name, name)));
 
           const found = vacs?.find(v => v.day === d && v.slot === slot);
           if (found) {
@@ -301,23 +286,28 @@
       const month = +monthSelect.value;
       const selects = document.querySelectorAll(".day-cell select");
       const inserts = [];
+      const deletes = [];
 
       for (const sel of selects) {
         const day = +sel.dataset.day;
         const slot = +sel.dataset.slot;
         const name = sel.value;
 
-        if (name && name !== "CLEAR") {
+        if (name === "CLEAR") {
+          deletes.push({ day, slot });
+        } else if (name && name !== "") {
           inserts.push({ year, month, day, slot, name });
-        } else {
-          await supabase
-            .from("vacations")
-            .delete()
-            .eq("year", year)
-            .eq("month", month)
-            .eq("day", day)
-            .eq("slot", slot);
         }
+      }
+
+      for (const del of deletes) {
+        await supabase
+          .from("vacations")
+          .delete()
+          .eq("year", year)
+          .eq("month", month)
+          .eq("day", del.day)
+          .eq("slot", del.slot);
       }
 
       if (inserts.length > 0) {
