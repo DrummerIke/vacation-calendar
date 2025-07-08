@@ -3,18 +3,17 @@
 <head>
   <meta charset="UTF-8" />
   <title>График отпусков</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@500&display=swap" rel="stylesheet" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@500&display=swap" rel="stylesheet">
   <style>
     body {
-      font-family: 'Nunito', Arial, sans-serif;
+      font-family: 'Nunito', sans-serif;
       margin: 20px;
       background-color: #3a3330;
       color: white;
       display: flex;
       flex-direction: column;
       align-items: center;
-      min-height: 100vh;
     }
 
     .controls {
@@ -23,19 +22,17 @@
       flex-wrap: wrap;
       gap: 10px;
       justify-content: center;
-      width: 100%;
-      max-width: 1000px;
     }
 
-    select, button, input[type="password"] {
+    select, button {
       padding: 10px 15px;
       font-size: 16px;
+      border-radius: 8px;
+      border: none;
       background-color: #ef6f2e;
       color: white;
-      border: none;
-      border-radius: 8px;
       cursor: pointer;
-      transition: 0.3s;
+      transition: background-color 0.3s ease;
     }
 
     select {
@@ -44,29 +41,24 @@
       color: white;
     }
 
-    input[type="password"] {
-      background-color: #3a3330;
-      color: white;
-      border: 1px solid #777;
-    }
-
     button:hover {
       background-color: #d65a1f;
     }
 
     .calendar-wrapper {
       overflow-x: auto;
-      background: #2e2826;
-      padding: 10px;
-      border-radius: 10px;
       width: 100%;
+      max-width: 100%;
+      border: 1px solid #555;
+      background-color: #2e2826;
+      border-radius: 10px;
+      padding: 10px;
     }
 
     .calendar {
       display: grid;
       grid-auto-flow: column;
       grid-auto-columns: 100px;
-      gap: 5px;
     }
 
     .day-column {
@@ -76,15 +68,15 @@
     }
 
     .day-header {
-      text-align: center;
-      font-weight: bold;
       background-color: #4b423f;
-      border-radius: 5px;
+      text-align: center;
       line-height: 40px;
+      border-radius: 5px;
+      font-weight: bold;
     }
 
-    .day-header.weekend {
-      background-color: #3a3330;
+    .weekend {
+      background-color: #3a3330 !important;
     }
 
     .day-cell {
@@ -98,35 +90,77 @@
     .day-cell select {
       width: 100%;
       height: 100%;
-      padding: 5px;
-      box-sizing: border-box;
-      font-size: 14px;
+      padding: 2px;
       border: none;
       border-radius: 4px;
-      background-color: #fff;
-      color: #000;
+      text-align: center;
+      font-size: 14px;
+      background-color: white;
+      color: black;
+      box-sizing: border-box;
     }
 
-    .day-cell select.filled {
+    .filled {
       background-color: #ef6f2e !important;
-      color: white;
-      font-weight: bold;
     }
 
     #status {
-      margin-top: 20px;
+      margin-top: 15px;
       font-weight: bold;
+      text-align: center;
+    }
+
+    .download-btn {
+      background-color: #0077cc;
+    }
+
+    #modal-overlay {
+      display: none;
+      position: fixed;
+      top:0;
+      left:0;
+      width:100%;
+      height:100%;
+      background:rgba(0,0,0,0.6);
+      display:flex;
+      justify-content:center;
+      align-items:center;
+      z-index:1000;
+    }
+
+    #modal-box {
+      background:white;
+      padding:20px;
+      border-radius:10px;
+      color:black;
+      text-align:center;
+    }
+
+    #modal-box input {
+      padding:10px;
+      margin:10px 0;
+      width: 200px;
+    }
+
+    #modal-box button {
+      margin: 5px;
+      background-color:#ef6f2e;
+      color:white;
+      border:none;
+      border-radius:6px;
+      padding:8px 12px;
+      cursor:pointer;
     }
   </style>
 </head>
 <body>
+
   <div class="controls">
     <select id="month-select"></select>
     <select id="year-select"></select>
-    <input id="password-input" type="password" placeholder="Пароль" />
     <button id="load-btn">Показать</button>
     <button id="save-btn">Записать</button>
-    <button id="export-btn">Выгрузить в Excel</button>
+    <button id="download-btn" class="download-btn">⬇️ Excel</button>
   </div>
 
   <div class="calendar-wrapper">
@@ -135,7 +169,17 @@
 
   <div id="status"></div>
 
-  <!-- Supabase -->
+  <div id="modal-overlay">
+    <div id="modal-box">
+      <p>Введите пароль для записи:</p>
+      <input type="password" id="modal-password" />
+      <div>
+        <button id="confirm-password">Подтвердить</button>
+        <button id="cancel-password">Отмена</button>
+      </div>
+    </div>
+  </div>
+
   <script type="module">
     import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
 
@@ -146,73 +190,80 @@
 
     const PASSWORD = "06062025";
     const MONTHS = ['Январь','Февраль','Март','Апрель','Май','Июнь','Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'];
-    const monthSelect = document.getElementById('month-select');
-    const yearSelect = document.getElementById('year-select');
-    const calendarContainer = document.getElementById('calendar');
-    const status = document.getElementById('status');
+
+    const monthSelect = document.getElementById("month-select");
+    const yearSelect = document.getElementById("year-select");
+    const calendar = document.getElementById("calendar");
+    const status = document.getElementById("status");
+
+    let names = [];
 
     MONTHS.forEach((m, i) => {
-      monthSelect.appendChild(new Option(m, i));
+      const option = document.createElement("option");
+      option.value = i;
+      option.textContent = m;
+      monthSelect.appendChild(option);
     });
+
     for (let y = 2025; y <= 2029; y++) {
       yearSelect.appendChild(new Option(y, y));
     }
 
-    const now = new Date();
-    monthSelect.value = now.getMonth();
-    yearSelect.value = now.getFullYear();
+    document.getElementById("load-btn").onclick = loadCalendar;
+    document.getElementById("save-btn").onclick = () => {
+      document.getElementById("modal-password").value = "";
+      document.getElementById("modal-overlay").style.display = "flex";
+    };
+    document.getElementById("download-btn").onclick = downloadExcel;
 
-    let names = [];
-    let vacations = [];
+    document.getElementById("cancel-password").onclick = () => {
+      document.getElementById("modal-overlay").style.display = "none";
+    };
 
-    document.getElementById("load-btn").onclick = () => loadCalendar();
-    document.getElementById("save-btn").onclick = () => saveSelected();
-    document.getElementById("export-btn").onclick = () => exportToExcel();
+    document.getElementById("confirm-password").onclick = async () => {
+      const password = document.getElementById("modal-password").value.trim();
+      if (password !== PASSWORD) {
+        status.textContent = "Неверный пароль";
+        document.getElementById("modal-overlay").style.display = "none";
+        return;
+      }
+      document.getElementById("modal-overlay").style.display = "none";
+      await saveSelected();
+    };
 
     async function loadCalendar() {
       const year = +yearSelect.value;
       const month = +monthSelect.value;
-      calendarContainer.innerHTML = '';
-      status.textContent = 'Загружаю...';
+      calendar.innerHTML = "";
+      status.textContent = "Загружаю...";
 
-      const [namesRes, vacsRes] = await Promise.all([
-        supabase.from('employees').select('name'),
-        supabase.from('vacations').select('*').eq('year', year).eq('month', month)
-      ]);
+      const { data: nameData } = await supabase.from("employees").select("name");
+      const { data: vacs } = await supabase.from("vacations")
+        .select("*")
+        .eq("year", year)
+        .eq("month", month);
 
-      if (namesRes.error || vacsRes.error) {
-        status.textContent = 'Ошибка при загрузке данных';
-        console.error(namesRes.error || vacsRes.error);
-        return;
-      }
+      names = nameData?.map(e => e.name) || [];
 
-      names = namesRes.data.map(n => n.name);
-      vacations = vacsRes.data;
+      const daysInMonth = new Date(year, month + 1, 0).getDate();
 
-      const days = new Date(year, month + 1, 0).getDate();
+      for (let d = 1; d <= daysInMonth; d++) {
+        const col = document.createElement("div");
+        col.className = "day-column";
 
-      for (let day = 1; day <= days; day++) {
-        const col = document.createElement('div');
-        col.className = 'day-column';
-
-        const header = document.createElement('div');
-        header.className = 'day-header';
-        header.textContent = day;
-
-        const date = new Date(year, month, day);
-        const dayOfWeek = date.getDay();
-        if (dayOfWeek === 0 || dayOfWeek === 6) {
-          header.classList.add("weekend");
-        }
-
+        const date = new Date(year, month, d);
+        const day = date.getDay();
+        const header = document.createElement("div");
+        header.className = "day-header";
+        if (day === 0 || day === 6) header.classList.add("weekend");
+        header.textContent = d;
         col.appendChild(header);
 
         for (let slot = 0; slot < 7; slot++) {
-          const cell = document.createElement('div');
-          cell.className = 'day-cell';
-
-          const select = document.createElement('select');
-          select.dataset.day = day;
+          const cell = document.createElement("div");
+          cell.className = "day-cell";
+          const select = document.createElement("select");
+          select.dataset.day = d;
           select.dataset.slot = slot;
 
           select.appendChild(new Option("Выберите", ""));
@@ -221,20 +272,17 @@
             select.appendChild(new Option(name, name));
           });
 
-          const vac = vacations.find(v => v.day == day && v.slot == slot);
-          if (vac) {
-            select.value = vac.name;
-            select.classList.add("filled");
+          const found = vacs?.find(v => v.day === d && v.slot === slot);
+          if (found) {
+            select.value = found.name;
+            cell.classList.add("filled");
           }
 
           select.onchange = () => {
-            if (select.value === "CLEAR") {
-              select.value = "";
-              select.classList.remove("filled");
-            } else if (select.value) {
-              select.classList.add("filled");
+            if (select.value && select.value !== "CLEAR") {
+              cell.classList.add("filled");
             } else {
-              select.classList.remove("filled");
+              cell.classList.remove("filled");
             }
           };
 
@@ -242,90 +290,80 @@
           col.appendChild(cell);
         }
 
-        calendarContainer.appendChild(col);
+        calendar.appendChild(col);
       }
 
-      status.textContent = '';
+      status.textContent = "";
     }
 
     async function saveSelected() {
-      const password = document.getElementById('password-input').value.trim();
-      if (password !== PASSWORD) {
-        status.textContent = "Неверный пароль.";
-        return;
-      }
-
       const year = +yearSelect.value;
       const month = +monthSelect.value;
+      const selects = document.querySelectorAll(".day-cell select");
       const inserts = [];
 
-      document.querySelectorAll('.day-cell select').forEach(sel => {
+      for (const sel of selects) {
         const day = +sel.dataset.day;
         const slot = +sel.dataset.slot;
         const name = sel.value;
 
         if (name && name !== "CLEAR") {
           inserts.push({ year, month, day, slot, name });
+        } else {
+          await supabase
+            .from("vacations")
+            .delete()
+            .eq("year", year)
+            .eq("month", month)
+            .eq("day", day)
+            .eq("slot", slot);
         }
-      });
-
-      const { error } = await supabase
-        .from("vacations")
-        .delete()
-        .eq("year", year)
-        .eq("month", month);
-
-      if (error) {
-        status.textContent = 'Ошибка при удалении.';
-        console.error(error);
-        return;
       }
 
-      if (inserts.length === 0) {
-        status.textContent = 'Все ячейки очищены.';
-        return;
+      if (inserts.length > 0) {
+        const { error } = await supabase.from("vacations").upsert(inserts);
+        if (error) {
+          status.textContent = "Ошибка при записи";
+          console.error(error);
+          return;
+        }
       }
 
-      const { error: insertError } = await supabase.from('vacations').upsert(inserts);
-      if (insertError) {
-        status.textContent = 'Ошибка при записи.';
-        console.error(insertError);
-      } else {
-        status.textContent = '✅ Сохранено!';
-        loadCalendar();
-      }
+      status.textContent = "✅ Успешно сохранено!";
+      loadCalendar();
     }
 
-    async function exportToExcel() {
+    async function downloadExcel() {
       const year = +yearSelect.value;
       const month = +monthSelect.value;
-      const { data, error } = await supabase
+      const { data } = await supabase
         .from("vacations")
         .select("*")
         .eq("year", year)
         .eq("month", month);
 
-      if (error || !data) {
-        status.textContent = "Ошибка при выгрузке.";
-        console.error(error);
-        return;
-      }
-
-      const ws_data = [
-        ["Год", "Месяц", "День", "Слот", "Имя"],
-        ...data.map(row => [row.year, row.month + 1, row.day, row.slot + 1, row.name]),
+      const rows = [
+        ["Год", "Месяц", "День", "Слот", "Фамилия"],
+        ...data.map(r => [r.year, r.month + 1, r.day, r.slot + 1, r.name])
       ];
 
-      const wb = XLSX.utils.book_new();
-      const ws = XLSX.utils.aoa_to_sheet(ws_data);
-      XLSX.utils.book_append_sheet(wb, ws, "Отпуска");
-      XLSX.writeFile(wb, `Отпуска_${year}_${month + 1}.xlsx`);
+      const csv = rows.map(r => r.join(",")).join("\n");
+      const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+      const url = URL.createObjectURL(blob);
+
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `отпуска_${year}_${month + 1}.csv`;
+      a.click();
+      URL.revokeObjectURL(url);
     }
 
-    loadCalendar();
+    window.onload = () => {
+      const now = new Date();
+      monthSelect.value = now.getMonth();
+      yearSelect.value = now.getFullYear();
+      loadCalendar();
+    };
   </script>
-
-  <!-- SheetJS -->
-  <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
 </body>
 </html>
