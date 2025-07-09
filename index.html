@@ -78,7 +78,7 @@
       align-items: center;
     }
     .day-cell.filled {
-      background-color: #ef6f2e;
+      background-color: #ef6f2e !important;
     }
     .day-cell select {
       width: 100%;
@@ -94,6 +94,7 @@
       margin-top: 20px;
       font-weight: bold;
       text-align: center;
+      min-height: 24px;
     }
   </style>
 </head>
@@ -114,7 +115,8 @@
   <div id="status"></div>
 
   <script>
-    const { createClient } = supabase;
+    // Инициализация Supabase — строго так, чтобы избежать ошибки
+    const { createClient } = window.supabase;
     const supabaseClient = createClient(
       'https://mhtbolnovisgdliphsmf.supabase.co',
       'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1odGJvbG5vdmlzZ2RsaXBoc21mIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTE4Mjk1OTYsImV4cCI6MjA2NzQwNTU5Nn0.ureoaGoJ9Dsp6bRAGmqA9x0his3eRamYGs6fOXQOmB0'
@@ -128,9 +130,9 @@
     const calendarContainer = document.getElementById('calendar');
     const status = document.getElementById('status');
 
-    let names = [];
-    let vacations = [];
+    let names = [], vacations = [];
 
+    // Заполнить селекты месяцами и годами
     MONTHS.forEach((m, i) => monthSelect.appendChild(new Option(m, i)));
     for (let y = 2025; y <= 2029; y++) yearSelect.appendChild(new Option(y, y));
 
@@ -205,11 +207,11 @@
         calendarContainer.appendChild(col);
       }
 
-      status.textContent = '✅ Готово';
+      status.textContent = '✅ Загружено';
     }
 
     async function saveSelected() {
-      const password = prompt("Введите пароль:");
+      const password = window.prompt("Введите пароль для записи:");
       if (password !== PASSWORD) {
         status.textContent = '❌ Неверный пароль.';
         return;
@@ -233,7 +235,7 @@
         }
       });
 
-      // Удаление пустых
+      // Удаляем старые записи
       for (const d of deletes) {
         await supabaseClient
           .from('vacations')
@@ -244,7 +246,7 @@
           .eq('slot', d.slot);
       }
 
-      // Вставка новых
+      // Вставляем/обновляем новые записи
       if (inserts.length > 0) {
         const { error } = await supabaseClient
           .from('vacations')
@@ -256,8 +258,8 @@
         }
       }
 
-      status.textContent = '✅ Данные сохранены.';
-      loadCalendar();
+      status.textContent = '✅ Данные успешно сохранены.';
+      await loadCalendar();
     }
 
     async function exportToExcel() {
@@ -270,27 +272,17 @@
         .eq('year', year)
         .eq('month', month);
 
-      if (error || !data.length) {
+      if (error || !data || data.length === 0) {
         alert("Нет данных или ошибка при получении.");
         return;
       }
 
-      const grouped = {};
-      data.forEach(v => {
-        const key = v.name;
-        if (!grouped[key]) {
-          grouped[key] = { start: v.day, end: v.day };
-        } else {
-          grouped[key].start = Math.min(grouped[key].start, v.day);
-          grouped[key].end = Math.max(grouped[key].end, v.day);
-        }
-      });
-
-      const rows = Object.entries(grouped).map(([name, { start, end }]) => ({
-        Фамилия: name,
-        Месяц: MONTHS[month],
-        Начало: start,
-        Конец: end,
+      const rows = data.map(d => ({
+        Год: d.year,
+        Месяц: MONTHS[d.month],
+        День: d.day,
+        Слот: d.slot,
+        Имя: d.name
       }));
 
       const ws = XLSX.utils.json_to_sheet(rows);
