@@ -94,6 +94,7 @@
       margin-top: 20px;
       font-weight: bold;
       text-align: center;
+      min-height: 24px;
     }
   </style>
 </head>
@@ -145,65 +146,70 @@
       calendarContainer.innerHTML = '';
       status.textContent = 'Загружаю...';
 
-      const [namesRes, vacsRes] = await Promise.all([
-        supabase.from('employees').select('name'),
-        supabase.from('vacations').select('*').eq('year', year).eq('month', month),
-      ]);
+      try {
+        const [namesRes, vacsRes] = await Promise.all([
+          supabase.from('employees').select('name'),
+          supabase.from('vacations').select('*').eq('year', year).eq('month', month),
+        ]);
 
-      if (namesRes.error || vacsRes.error) {
-        status.textContent = '❌ Ошибка при загрузке данных';
-        return;
-      }
-
-      names = namesRes.data.map(n => n.name);
-      vacations = vacsRes.data;
-
-      const days = new Date(year, month + 1, 0).getDate();
-
-      for (let day = 1; day <= days; day++) {
-        const col = document.createElement('div');
-        col.className = 'day-column';
-
-        const header = document.createElement('div');
-        header.className = 'day-header';
-        header.textContent = day;
-        const dayOfWeek = new Date(year, month, day).getDay();
-        if (dayOfWeek === 0 || dayOfWeek === 6) header.classList.add('weekend');
-        col.appendChild(header);
-
-        for (let slot = 0; slot < 7; slot++) {
-          const cell = document.createElement('div');
-          cell.className = 'day-cell';
-
-          const select = document.createElement('select');
-          select.dataset.day = day;
-          select.dataset.slot = slot;
-
-          select.appendChild(new Option("Очистить", ""));
-          names.forEach(name => select.appendChild(new Option(name, name)));
-
-          const vac = vacations.find(v => v.day == day && v.slot == slot);
-          if (vac) {
-            select.value = vac.name;
-            cell.classList.add('filled');
-          }
-
-          select.onchange = () => {
-            if (select.value) {
-              cell.classList.add('filled');
-            } else {
-              cell.classList.remove('filled');
-            }
-          };
-
-          cell.appendChild(select);
-          col.appendChild(cell);
+        if (namesRes.error || vacsRes.error) {
+          status.textContent = '❌ Ошибка при загрузке данных';
+          return;
         }
 
-        calendarContainer.appendChild(col);
-      }
+        names = namesRes.data.map(n => n.name);
+        vacations = vacsRes.data;
 
-      status.textContent = '';
+        const days = new Date(year, month + 1, 0).getDate();
+
+        for (let day = 1; day <= days; day++) {
+          const col = document.createElement('div');
+          col.className = 'day-column';
+
+          const header = document.createElement('div');
+          header.className = 'day-header';
+          header.textContent = day;
+          const dayOfWeek = new Date(year, month, day).getDay();
+          if (dayOfWeek === 0 || dayOfWeek === 6) header.classList.add('weekend');
+          col.appendChild(header);
+
+          for (let slot = 0; slot < 7; slot++) {
+            const cell = document.createElement('div');
+            cell.className = 'day-cell';
+
+            const select = document.createElement('select');
+            select.dataset.day = day;
+            select.dataset.slot = slot;
+
+            select.appendChild(new Option("Очистить", ""));
+            names.forEach(name => select.appendChild(new Option(name, name)));
+
+            const vac = vacations.find(v => v.day == day && v.slot == slot);
+            if (vac) {
+              select.value = vac.name;
+              cell.classList.add('filled');
+            }
+
+            select.onchange = () => {
+              if (select.value) {
+                cell.classList.add('filled');
+              } else {
+                cell.classList.remove('filled');
+              }
+            };
+
+            cell.appendChild(select);
+            col.appendChild(cell);
+          }
+
+          calendarContainer.appendChild(col);
+        }
+
+        status.textContent = '';
+      } catch (error) {
+        status.textContent = '❌ Ошибка при загрузке данных';
+        console.error(error);
+      }
     }
 
     async function saveSelected() {
@@ -216,7 +222,8 @@
       const year = +yearSelect.value;
       const month = +monthSelect.value;
 
-      const inserts = [], deletes = [];
+      const inserts = [];
+      const deletes = [];
 
       document.querySelectorAll('.day-cell select').forEach(sel => {
         const val = sel.value;
@@ -230,69 +237,78 @@
         }
       });
 
-      for (const d of deletes) {
-        await supabase.from('vacations')
-          .delete()
-          .eq('year', d.year)
-          .eq('month', d.month)
-          .eq('day', d.day)
-          .eq('slot', d.slot);
-      }
-
-      if (inserts.length > 0) {
-        const { error } = await supabase.from('vacations')
-          .upsert(inserts, { onConflict: ['year', 'month', 'day', 'slot'] });
-
-        if (error) {
-          status.textContent = '❌ Ошибка при записи.';
-          return;
+      try {
+        for (const d of deletes) {
+          const { error } = await supabase
+            .from('vacations')
+            .delete()
+            .eq('year', d.year)
+            .eq('month', d.month)
+            .eq('day', d.day)
+            .eq('slot', d.slot);
+          if (error) throw error;
         }
-      }
 
-      status.textContent = '✅ Данные успешно сохранены.';
-      loadCalendar();
+        if (inserts.length > 0) {
+          const { error } = await supabase
+            .from('vacations')
+            .upsert(inserts, { onConflict: ['year', 'month', 'day', 'slot'] });
+          if (error) throw error;
+        }
+
+        status.textContent = '✅ Данные успешно сохранены.';
+        loadCalendar();
+      } catch (error) {
+        status.textContent = '❌ Ошибка при записи данных.';
+        console.error(error);
+      }
     }
 
     async function exportToExcel() {
       const year = +yearSelect.value;
       const month = +monthSelect.value;
 
-      const { data, error } = await supabase
-        .from('vacations')
-        .select('*')
-        .eq('year', year)
-        .eq('month', month);
+      try {
+        const { data, error } = await supabase
+          .from('vacations')
+          .select('*')
+          .eq('year', year)
+          .eq('month', month);
 
-      if (error || !data.length) {
-        alert("Нет данных или ошибка при получении.");
-        return;
-      }
-
-      const grouped = {};
-      data.forEach(v => {
-        const key = v.name;
-        if (!grouped[key]) {
-          grouped[key] = { start: v.day, end: v.day };
-        } else {
-          grouped[key].start = Math.min(grouped[key].start, v.day);
-          grouped[key].end = Math.max(grouped[key].end, v.day);
+        if (error || !data.length) {
+          alert("Нет данных или ошибка при получении.");
+          return;
         }
-      });
 
-      const rows = Object.entries(grouped).map(([name, { start, end }]) => ({
-        Фамилия: name,
-        Месяц: MONTHS[month],
-        Начало: start,
-        Конец: end,
-      }));
+        const grouped = {};
+        data.forEach(v => {
+          const key = v.name;
+          if (!grouped[key]) {
+            grouped[key] = { start: v.day, end: v.day };
+          } else {
+            grouped[key].start = Math.min(grouped[key].start, v.day);
+            grouped[key].end = Math.max(grouped[key].end, v.day);
+          }
+        });
 
-      const ws = XLSX.utils.json_to_sheet(rows);
-      const wb = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(wb, ws, "Отпуска");
-      XLSX.writeFile(wb, `vacations_${year}_${month + 1}.xlsx`);
+        const rows = Object.entries(grouped).map(([name, { start, end }]) => ({
+          Фамилия: name,
+          Месяц: MONTHS[month],
+          Начало: start,
+          Конец: end,
+        }));
+
+        const ws = XLSX.utils.json_to_sheet(rows);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, "Отпуска");
+        XLSX.writeFile(wb, `vacations_${year}_${month + 1}.xlsx`);
+      } catch (error) {
+        alert("Ошибка при экспорте в Excel.");
+        console.error(error);
+      }
     }
 
     window.onload = loadCalendar;
-  </script>m
+  </script>
 </body>
 </html>
