@@ -4,8 +4,8 @@
   <meta charset="UTF-8" />
   <title>График отпусков</title>
   <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@500&display=swap" rel="stylesheet" />
-  <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
-  <script defer src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
   <style>
     body {
       font-family: 'Nunito', sans-serif;
@@ -35,6 +35,10 @@
     select {
       background-color: #3a3330;
       border: 1px solid #777;
+      color: white;
+    }
+    button:hover {
+      background-color: #d65a1f;
     }
     .calendar-wrapper {
       width: 100%;
@@ -74,7 +78,7 @@
       align-items: center;
     }
     .day-cell.filled {
-      background-color: #ef6f2e !important;
+      background-color: #ef6f2e;
     }
     .day-cell select {
       width: 100%;
@@ -94,11 +98,13 @@
   </style>
 </head>
 <body>
+
   <div class="controls">
     <select id="month-select"></select>
     <select id="year-select"></select>
     <button id="load-btn">Показать</button>
     <button id="save-btn">Записать</button>
+    <button id="export-btn">Excel</button>
   </div>
 
   <div class="calendar-wrapper">
@@ -108,138 +114,192 @@
   <div id="status"></div>
 
   <script>
-    window.addEventListener("DOMContentLoaded", async () => {
-      const { createClient } = supabase;
-      const supabaseClient = createClient(
-        'https://mhtbolnovisgdliphsmf.supabase.co',
-        'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1odGJvbG5vdmlzZ2RsaXBoc21mIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTE4Mjk1OTYsImV4cCI6MjA2NzQwNTU5Nn0.ureoaGoJ9Dsp6bRAGmqA9x0his3eRamYGs6fOXQOmB0'
-      );
+    const { createClient } = supabase;
+    const supabaseClient = createClient(
+      'https://mhtbolnovisgdliphsmf.supabase.co',
+      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1odGJvbG5vdmlzZ2RsaXBoc21mIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTE4Mjk1OTYsImV4cCI6MjA2NzQwNTU5Nn0.ureoaGoJ9Dsp6bRAGmqA9x0his3eRamYGs6fOXQOmB0'
+    );
 
-      const PASSWORD = "06062025";
-      const MONTHS = ['Январь','Февраль','Март','Апрель','Май','Июнь','Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'];
+    const PASSWORD = "06062025";
+    const MONTHS = ['Январь','Февраль','Март','Апрель','Май','Июнь','Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'];
 
-      const monthSelect = document.getElementById('month-select');
-      const yearSelect = document.getElementById('year-select');
-      const calendarContainer = document.getElementById('calendar');
-      const status = document.getElementById('status');
+    const monthSelect = document.getElementById('month-select');
+    const yearSelect = document.getElementById('year-select');
+    const calendarContainer = document.getElementById('calendar');
+    const status = document.getElementById('status');
 
-      let names = [];
+    let names = [];
+    let vacations = [];
 
-      MONTHS.forEach((m, i) => monthSelect.appendChild(new Option(m, i)));
-      for (let y = 2025; y <= 2029; y++) yearSelect.appendChild(new Option(y, y));
-      monthSelect.value = new Date().getMonth();
-      yearSelect.value = new Date().getFullYear();
+    MONTHS.forEach((m, i) => monthSelect.appendChild(new Option(m, i)));
+    for (let y = 2025; y <= 2029; y++) yearSelect.appendChild(new Option(y, y));
 
-      document.getElementById('load-btn').onclick = loadCalendar;
-      document.getElementById('save-btn').onclick = saveCalendar;
+    monthSelect.value = new Date().getMonth();
+    yearSelect.value = new Date().getFullYear();
 
-      async function loadCalendar() {
-        const year = +yearSelect.value;
-        const month = +monthSelect.value;
-        calendarContainer.innerHTML = '';
-        status.textContent = 'Загрузка...';
+    document.getElementById('load-btn').onclick = loadCalendar;
+    document.getElementById('save-btn').onclick = saveSelected;
+    document.getElementById('export-btn').onclick = exportToExcel;
 
-        const [namesRes, vacsRes] = await Promise.all([
-          supabaseClient.from('employees').select('name'),
-          supabaseClient.from('vacations').select('*').eq('year', year).eq('month', month)
-        ]);
+    async function loadCalendar() {
+      const year = +yearSelect.value;
+      const month = +monthSelect.value;
+      calendarContainer.innerHTML = '';
+      status.textContent = '⏳ Загружаю...';
 
-        if (namesRes.error || vacsRes.error) {
-          status.textContent = 'Ошибка загрузки';
-          return;
-        }
+      const [namesRes, vacsRes] = await Promise.all([
+        supabaseClient.from('employees').select('name'),
+        supabaseClient.from('vacations').select('*').eq('year', year).eq('month', month),
+      ]);
 
-        names = namesRes.data.map(n => n.name);
-        const vacations = vacsRes.data;
-        const days = new Date(year, month + 1, 0).getDate();
+      if (namesRes.error || vacsRes.error) {
+        status.textContent = '❌ Ошибка при загрузке данных';
+        return;
+      }
 
-        for (let day = 1; day <= days; day++) {
-          const col = document.createElement('div');
-          col.className = 'day-column';
+      names = namesRes.data.map(n => n.name);
+      vacations = vacsRes.data;
 
-          const header = document.createElement('div');
-          header.className = 'day-header';
-          header.textContent = day;
-          const weekday = new Date(year, month, day).getDay();
-          if (weekday === 0 || weekday === 6) header.classList.add('weekend');
-          col.appendChild(header);
+      const days = new Date(year, month + 1, 0).getDate();
 
-          for (let slot = 0; slot < 7; slot++) {
-            const cell = document.createElement('div');
-            cell.className = 'day-cell';
+      for (let day = 1; day <= days; day++) {
+        const col = document.createElement('div');
+        col.className = 'day-column';
 
-            const select = document.createElement('select');
-            select.dataset.day = day;
-            select.dataset.slot = slot;
-            select.appendChild(new Option("Очистить", ""));
-            names.forEach(name => select.appendChild(new Option(name, name)));
+        const header = document.createElement('div');
+        header.className = 'day-header';
+        header.textContent = day;
+        const dayOfWeek = new Date(year, month, day).getDay();
+        if (dayOfWeek === 0 || dayOfWeek === 6) header.classList.add('weekend');
+        col.appendChild(header);
 
-            const vac = vacations.find(v => v.day == day && v.slot == slot);
-            if (vac) {
-              select.value = vac.name;
+        for (let slot = 0; slot < 7; slot++) {
+          const cell = document.createElement('div');
+          cell.className = 'day-cell';
+
+          const select = document.createElement('select');
+          select.dataset.day = day;
+          select.dataset.slot = slot;
+
+          select.appendChild(new Option("Очистить", ""));
+          names.forEach(name => select.appendChild(new Option(name, name)));
+
+          const vac = vacations.find(v => v.day == day && v.slot == slot);
+          if (vac) {
+            select.value = vac.name;
+            cell.classList.add('filled');
+          }
+
+          select.onchange = () => {
+            if (select.value) {
               cell.classList.add('filled');
+            } else {
+              cell.classList.remove('filled');
             }
+          };
 
-            select.onchange = () => {
-              if (select.value) cell.classList.add('filled');
-              else cell.classList.remove('filled');
-            };
-
-            cell.appendChild(select);
-            col.appendChild(cell);
-          }
-
-          calendarContainer.appendChild(col);
+          cell.appendChild(select);
+          col.appendChild(cell);
         }
 
-        status.textContent = '';
+        calendarContainer.appendChild(col);
       }
 
-      async function saveCalendar() {
-        const password = prompt("Введите пароль для записи:");
-        if (password !== PASSWORD) {
-          status.textContent = '❌ Неверный пароль.';
+      status.textContent = '✅ Готово';
+    }
+
+    async function saveSelected() {
+      const password = prompt("Введите пароль:");
+      if (password !== PASSWORD) {
+        status.textContent = '❌ Неверный пароль.';
+        return;
+      }
+
+      const year = +yearSelect.value;
+      const month = +monthSelect.value;
+
+      const inserts = [];
+      const deletes = [];
+
+      document.querySelectorAll('.day-cell select').forEach(sel => {
+        const val = sel.value;
+        const day = +sel.dataset.day;
+        const slot = +sel.dataset.slot;
+
+        if (val) {
+          inserts.push({ year, month, day, slot, name: val });
+        } else {
+          deletes.push({ year, month, day, slot });
+        }
+      });
+
+      // Удаление пустых
+      for (const d of deletes) {
+        await supabaseClient
+          .from('vacations')
+          .delete()
+          .eq('year', d.year)
+          .eq('month', d.month)
+          .eq('day', d.day)
+          .eq('slot', d.slot);
+      }
+
+      // Вставка новых
+      if (inserts.length > 0) {
+        const { error } = await supabaseClient
+          .from('vacations')
+          .upsert(inserts, { onConflict: ['year', 'month', 'day', 'slot'] });
+
+        if (error) {
+          status.textContent = '❌ Ошибка при записи.';
           return;
         }
-
-        const year = +yearSelect.value;
-        const month = +monthSelect.value;
-
-        const inserts = [], deletes = [];
-
-        document.querySelectorAll('.day-cell select').forEach(sel => {
-          const val = sel.value;
-          const day = +sel.dataset.day;
-          const slot = +sel.dataset.slot;
-
-          if (val) inserts.push({ year, month, day, slot, name: val });
-          else deletes.push({ year, month, day, slot });
-        });
-
-        for (const d of deletes) {
-          await supabaseClient.from('vacations')
-            .delete()
-            .eq('year', d.year).eq('month', d.month)
-            .eq('day', d.day).eq('slot', d.slot);
-        }
-
-        if (inserts.length > 0) {
-          const { error } = await supabaseClient
-            .from('vacations')
-            .upsert(inserts, { onConflict: ['year', 'month', 'day', 'slot'] });
-
-          if (error) {
-            status.textContent = '❌ Ошибка при записи.';
-            return;
-          }
-        }
-
-        status.textContent = '✅ Данные сохранены';
-        loadCalendar();
       }
 
+      status.textContent = '✅ Данные сохранены.';
       loadCalendar();
-    });
+    }
+
+    async function exportToExcel() {
+      const year = +yearSelect.value;
+      const month = +monthSelect.value;
+
+      const { data, error } = await supabaseClient
+        .from('vacations')
+        .select('*')
+        .eq('year', year)
+        .eq('month', month);
+
+      if (error || !data.length) {
+        alert("Нет данных или ошибка при получении.");
+        return;
+      }
+
+      const grouped = {};
+      data.forEach(v => {
+        const key = v.name;
+        if (!grouped[key]) {
+          grouped[key] = { start: v.day, end: v.day };
+        } else {
+          grouped[key].start = Math.min(grouped[key].start, v.day);
+          grouped[key].end = Math.max(grouped[key].end, v.day);
+        }
+      });
+
+      const rows = Object.entries(grouped).map(([name, { start, end }]) => ({
+        Фамилия: name,
+        Месяц: MONTHS[month],
+        Начало: start,
+        Конец: end,
+      }));
+
+      const ws = XLSX.utils.json_to_sheet(rows);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, "Отпуска");
+      XLSX.writeFile(wb, `vacations_${year}_${month + 1}.xlsx`);
+    }
+
+    window.onload = loadCalendar;
   </script>
 </body>
 </html>
