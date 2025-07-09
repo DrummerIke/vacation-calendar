@@ -8,7 +8,7 @@
   <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
   <style>
     body {
-      font-family: 'Nunito', Arial, sans-serif;
+      font-family: 'Nunito', sans-serif;
       background-color: #3a3330;
       color: white;
       margin: 20px;
@@ -16,6 +16,7 @@
       flex-direction: column;
       align-items: center;
     }
+
     .controls {
       display: flex;
       flex-wrap: wrap;
@@ -23,23 +24,27 @@
       margin-bottom: 20px;
       justify-content: center;
     }
+
     select, button {
       padding: 10px 15px;
       font-size: 16px;
-      border: none;
       border-radius: 8px;
-      cursor: pointer;
+      border: none;
       background-color: #ef6f2e;
       color: white;
+      cursor: pointer;
     }
+
     select {
       background-color: #3a3330;
       border: 1px solid #777;
       color: white;
     }
+
     button:hover {
       background-color: #d65a1f;
     }
+
     .calendar-wrapper {
       width: 100%;
       overflow-x: auto;
@@ -48,18 +53,21 @@
       border-radius: 10px;
       max-width: 100%;
     }
+
     .calendar {
       display: grid;
       grid-auto-flow: column;
       grid-auto-columns: minmax(100px, 1fr);
       gap: 5px;
     }
+
     .day-column {
       display: grid;
       grid-template-rows: repeat(8, 40px);
       gap: 5px;
       min-width: 100px;
     }
+
     .day-header {
       background-color: #4b423f;
       text-align: center;
@@ -67,9 +75,11 @@
       border-radius: 5px;
       line-height: 40px;
     }
+
     .day-header.weekend {
       background-color: #3a3330;
     }
+
     .day-cell {
       background-color: #5c534f;
       border-radius: 5px;
@@ -77,9 +87,11 @@
       justify-content: center;
       align-items: center;
     }
+
     .day-cell.filled {
       background-color: #ef6f2e;
     }
+
     .day-cell select {
       width: 100%;
       height: 100%;
@@ -90,6 +102,7 @@
       font-size: 14px;
       box-sizing: border-box;
     }
+
     #status {
       margin-top: 20px;
       font-weight: bold;
@@ -114,8 +127,7 @@
   <div id="status"></div>
 
   <script>
-    const { createClient } = supabase;
-    const supabaseClient = createClient(
+    const supabase = supabase.createClient(
       'https://mhtbolnovisgdliphsmf.supabase.co',
       'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1odGJvbG5vdmlzZ2RsaXBoc21mIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTE4Mjk1OTYsImV4cCI6MjA2NzQwNTU5Nn0.ureoaGoJ9Dsp6bRAGmqA9x0his3eRamYGs6fOXQOmB0'
     );
@@ -134,6 +146,9 @@
     MONTHS.forEach((m, i) => monthSelect.appendChild(new Option(m, i)));
     for (let y = 2025; y <= 2029; y++) yearSelect.appendChild(new Option(y, y));
 
+    monthSelect.value = new Date().getMonth();
+    yearSelect.value = new Date().getFullYear();
+
     document.getElementById('load-btn').onclick = loadCalendar;
     document.getElementById('save-btn').onclick = saveSelected;
     document.getElementById('export-btn').onclick = exportToExcel;
@@ -145,12 +160,12 @@
       status.textContent = 'Загружаю...';
 
       const [namesRes, vacsRes] = await Promise.all([
-        supabaseClient.from('employees').select('name'),
-        supabaseClient.from('vacations').select('*').eq('year', year).eq('month', month),
+        supabase.from('employees').select('name'),
+        supabase.from('vacations').select('*').eq('year', year).eq('month', month),
       ]);
 
       if (namesRes.error || vacsRes.error) {
-        status.textContent = 'Ошибка при загрузке данных';
+        status.textContent = '❌ Ошибка при загрузке данных';
         return;
       }
 
@@ -208,7 +223,7 @@
     async function saveSelected() {
       const password = prompt("Введите пароль для записи:");
       if (password !== PASSWORD) {
-        alert("Неверный пароль.");
+        status.textContent = '❌ Неверный пароль.';
         return;
       }
 
@@ -231,7 +246,7 @@
       });
 
       for (const d of deletes) {
-        await supabaseClient
+        await supabase
           .from('vacations')
           .delete()
           .eq('year', d.year)
@@ -241,12 +256,12 @@
       }
 
       if (inserts.length > 0) {
-        const { error } = await supabaseClient
+        const { error } = await supabase
           .from('vacations')
           .upsert(inserts, { onConflict: ['year', 'month', 'day', 'slot'] });
 
         if (error) {
-          status.textContent = 'Ошибка при записи.';
+          status.textContent = '❌ Ошибка при записи.';
           return;
         }
       }
@@ -259,7 +274,7 @@
       const year = +yearSelect.value;
       const month = +monthSelect.value;
 
-      const { data, error } = await supabaseClient
+      const { data, error } = await supabase
         .from('vacations')
         .select('*')
         .eq('year', year)
@@ -296,5 +311,6 @@
 
     window.onload = loadCalendar;
   </script>
+
 </body>
 </html>
