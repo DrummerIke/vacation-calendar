@@ -78,7 +78,7 @@
       align-items: center;
     }
     .day-cell.filled {
-      background-color: #ef6f2e !important;
+      background-color: #ef6f2e;
     }
     .day-cell select {
       width: 100%;
@@ -94,7 +94,6 @@
       margin-top: 20px;
       font-weight: bold;
       text-align: center;
-      color: #ef6f2e;
     }
   </style>
 </head>
@@ -135,9 +134,6 @@
     MONTHS.forEach((m, i) => monthSelect.appendChild(new Option(m, i)));
     for (let y = 2025; y <= 2029; y++) yearSelect.appendChild(new Option(y, y));
 
-    monthSelect.value = new Date().getMonth();
-    yearSelect.value = new Date().getFullYear();
-
     document.getElementById('load-btn').onclick = loadCalendar;
     document.getElementById('save-btn').onclick = saveSelected;
     document.getElementById('export-btn').onclick = exportToExcel;
@@ -146,7 +142,7 @@
       const year = +yearSelect.value;
       const month = +monthSelect.value;
       calendarContainer.innerHTML = '';
-      status.textContent = 'Загрузка...';
+      status.textContent = 'Загружаю...';
 
       const [namesRes, vacsRes] = await Promise.all([
         supabaseClient.from('employees').select('name'),
