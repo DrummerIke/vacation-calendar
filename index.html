@@ -16,6 +16,7 @@
       flex-direction: column;
       align-items: center;
     }
+
     .controls {
       display: flex;
       flex-wrap: wrap;
@@ -23,6 +24,7 @@
       margin-bottom: 20px;
       justify-content: center;
     }
+
     select, button {
       padding: 10px 15px;
       font-size: 16px;
@@ -32,14 +34,17 @@
       color: white;
       cursor: pointer;
     }
+
     select {
       background-color: #3a3330;
       border: 1px solid #777;
       color: white;
     }
+
     button:hover {
       background-color: #d65a1f;
     }
+
     .calendar-wrapper {
       width: 100%;
       overflow-x: auto;
@@ -48,18 +53,21 @@
       border-radius: 10px;
       max-width: 100%;
     }
+
     .calendar {
       display: grid;
       grid-auto-flow: column;
       grid-auto-columns: minmax(100px, 1fr);
       gap: 5px;
     }
+
     .day-column {
       display: grid;
       grid-template-rows: repeat(8, 40px);
       gap: 5px;
       min-width: 100px;
     }
+
     .day-header {
       background-color: #4b423f;
       text-align: center;
@@ -67,9 +75,11 @@
       border-radius: 5px;
       line-height: 40px;
     }
+
     .day-header.weekend {
       background-color: #3a3330;
     }
+
     .day-cell {
       background-color: #5c534f;
       border-radius: 5px;
@@ -77,9 +87,11 @@
       justify-content: center;
       align-items: center;
     }
+
     .day-cell.filled {
-      background-color: #ef6f2e;
+      background-color: #ef6f2e !important;
     }
+
     .day-cell select {
       width: 100%;
       height: 100%;
@@ -90,10 +102,13 @@
       font-size: 14px;
       box-sizing: border-box;
     }
+
     #status {
       margin-top: 20px;
       font-weight: bold;
       text-align: center;
+      font-size: 18px;
+      color: white;
     }
   </style>
 </head>
@@ -114,7 +129,7 @@
   <div id="status"></div>
 
   <script>
-    const client = supabase.createClient(
+    const supabase = supabase.createClient(
       'https://mhtbolnovisgdliphsmf.supabase.co',
       'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1odGJvbG5vdmlzZ2RsaXBoc21mIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTE4Mjk1OTYsImV4cCI6MjA2NzQwNTU5Nn0.ureoaGoJ9Dsp6bRAGmqA9x0his3eRamYGs6fOXQOmB0'
     );
@@ -146,8 +161,8 @@
       status.textContent = 'Загружаю...';
 
       const [namesRes, vacsRes] = await Promise.all([
-        client.from('employees').select('name'),
-        client.from('vacations').select('*').eq('year', year).eq('month', month),
+        supabase.from('employees').select('name'),
+        supabase.from('vacations').select('*').eq('year', year).eq('month', month),
       ]);
 
       if (namesRes.error || vacsRes.error) {
@@ -184,6 +199,10 @@
 
           const vac = vacations.find(v => v.day == day && v.slot == slot);
           if (vac) {
+            if (!names.includes(vac.name)) {
+              const opt = new Option(vac.name, vac.name);
+              select.appendChild(opt);
+            }
             select.value = vac.name;
             cell.classList.add('filled');
           }
@@ -207,7 +226,7 @@
     }
 
     async function saveSelected() {
-      const password = prompt("Введите пароль для записи:");
+      const password = window.prompt("Введите пароль для записи:");
       if (password !== PASSWORD) {
         status.textContent = '❌ Неверный пароль.';
         return;
@@ -231,7 +250,7 @@
       });
 
       for (const d of deletes) {
-        await client.from('vacations')
+        await supabase.from('vacations')
           .delete()
           .eq('year', d.year)
           .eq('month', d.month)
@@ -240,7 +259,7 @@
       }
 
       if (inserts.length > 0) {
-        const { error } = await client.from('vacations')
+        const { error } = await supabase.from('vacations')
           .upsert(inserts, { onConflict: ['year', 'month', 'day', 'slot'] });
 
         if (error) {
@@ -257,7 +276,7 @@
       const year = +yearSelect.value;
       const month = +monthSelect.value;
 
-      const { data, error } = await client
+      const { data, error } = await supabase
         .from('vacations')
         .select('*')
         .eq('year', year)
