@@ -94,7 +94,7 @@
       border-radius: 4px;
       background-color: #3a3330;
       color: #fff;
-      font-size: 10px;
+      font-size: 8px;
       box-sizing: border-box;
     }
     .day-cell select option {
@@ -196,11 +196,14 @@
           const vac = vacations.find(v => v.day == day && v.slot == slot);
           if (vac && vac.name) {
             select.value = vac.name;
-            cell.classList.add('filled');  // Класс для оранжевой заливки
+          }
+
+          if (select.value !== "") {
+            cell.classList.add('filled');
           }
 
           select.onchange = () => {
-            if (select.value && select.value !== "") {
+            if (select.value !== "") {
               cell.classList.add('filled');
             } else {
               cell.classList.remove('filled');
@@ -229,7 +232,7 @@
 
       const rows = Array.from(document.querySelectorAll('.day-cell select'));
 
-      const upserts = rows.filter(sel => sel.value && sel.value !== "")
+      const upserts = rows.filter(sel => sel.value)
         .map(sel => ({
           year,
           month,
@@ -238,7 +241,7 @@
           name: sel.value
         }));
 
-      const deletions = rows.filter(sel => !sel.value || sel.value === "")
+      const deletions = rows.filter(sel => !sel.value)
         .map(sel => [sel.dataset.day, sel.dataset.slot]);
 
       status.textContent = 'Сохраняю...';
