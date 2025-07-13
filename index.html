@@ -105,7 +105,6 @@
       margin-top: 20px;
       font-weight: bold;
       text-align: center;
-      min-height: 24px;
     }
   </style>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
@@ -197,11 +196,11 @@
           const vac = vacations.find(v => v.day == day && v.slot == slot);
           if (vac) {
             select.value = vac.name;
-            cell.classList.add('filled');  // <- Вот тут добавляем оранжевую заливку
+            cell.classList.add('filled');
           }
 
           select.onchange = () => {
-            if (select.value && select.value !== '-') {
+            if (select.value) {
               cell.classList.add('filled');
             } else {
               cell.classList.remove('filled');
@@ -215,7 +214,7 @@
         calendarContainer.appendChild(col);
       }
 
-      status.textContent = '✅ Данные загружены';
+      status.textContent = '';
     }
 
     async function saveSelected() {
@@ -235,26 +234,20 @@
         const day = +sel.dataset.day;
         const slot = +sel.dataset.slot;
 
-        if (val && val !== '-') {
+        if (val) {
           inserts.push({ year, month, day, slot, name: val });
         } else {
           deletes.push({ year, month, day, slot });
         }
       });
 
-      status.textContent = 'Сохраняю...';
-
       for (const d of deletes) {
-        const { error } = await supabase.from('vacations')
+        await supabase.from('vacations')
           .delete()
           .eq('year', d.year)
           .eq('month', d.month)
           .eq('day', d.day)
           .eq('slot', d.slot);
-        if (error) {
-          status.textContent = '❌ Ошибка при удалении';
-          return;
-        }
       }
 
       if (inserts.length > 0) {
@@ -262,7 +255,7 @@
           .upsert(inserts, { onConflict: ['year', 'month', 'day', 'slot'] });
 
         if (error) {
-          status.textContent = '❌ Ошибка при записи';
+          status.textContent = '❌ Ошибка при записи.';
           return;
         }
       }
@@ -288,8 +281,9 @@
 
       const grouped = {};
       data.forEach(v => {
-        if (!grouped[v.name]) grouped[v.name] = [];
-        grouped[v.name].push(v.day);
+        const key = v.name;
+        if (!grouped[key]) grouped[key] = [];
+        grouped[key].push(v.day);
       });
 
       const rows = Object.entries(grouped).map(([name, days]) => {
