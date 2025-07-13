@@ -83,10 +83,6 @@
       display: flex;
       justify-content: center;
       align-items: center;
-      font-size: 13px;
-    }
-    .day-cell.filled {
-      background-color: #ef6f2e !important;
     }
     .day-cell select {
       width: 100%;
@@ -95,7 +91,7 @@
       border-radius: 4px;
       background-color: #3a3330;
       color: #fff;
-      font-size: 12px;
+      font-size: 10px;
       box-sizing: border-box;
     }
     .day-cell select option {
@@ -106,7 +102,6 @@
       margin-top: 20px;
       font-weight: bold;
       text-align: center;
-      min-height: 1.2em;
     }
   </style>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
@@ -196,16 +191,18 @@
           names.forEach(name => select.appendChild(new Option(name, name)));
 
           const vac = vacations.find(v => v.day == day && v.slot == slot);
-          if (vac && vac.name && vac.name !== "") {
+          if (vac && vac.name) {
             select.value = vac.name;
-            if (vac.name !== "-") cell.classList.add('filled');
+            cell.style.backgroundColor = '#ef6f2e';  // Оранжевая заливка занятых ячеек
+          } else {
+            cell.style.backgroundColor = '#5c534f';  // Серый фон пустых ячеек
           }
 
           select.onchange = () => {
-            if (select.value && select.value !== "-") {
-              cell.classList.add('filled');
+            if (select.value) {
+              cell.style.backgroundColor = '#ef6f2e';
             } else {
-              cell.classList.remove('filled');
+              cell.style.backgroundColor = '#5c534f';
             }
           };
 
@@ -229,41 +226,38 @@
       const year = +yearSelect.value;
       const month = +monthSelect.value;
 
-      const inserts = [];
-      const deletes = [];
+      const rows = Array.from(document.querySelectorAll('.day-cell select'));
 
-      document.querySelectorAll('.day-cell select').forEach(sel => {
-        const val = sel.value;
-        const day = +sel.dataset.day;
-        const slot = +sel.dataset.slot;
+      const upserts = rows.filter(sel => sel.value && sel.value !== "-")
+        .map(sel => ({
+          year,
+          month,
+          day: +sel.dataset.day,
+          slot: +sel.dataset.slot,
+          name: sel.value
+        }));
 
-        if (val && val !== "-") {
-          inserts.push({ year, month, day, slot, name: val });
-        } else {
-          deletes.push({ year, month, day, slot });
-        }
-      });
+      const deletions = rows.filter(sel => !sel.value || sel.value === "-")
+        .map(sel => [sel.dataset.day, sel.dataset.slot]);
 
       status.textContent = 'Сохраняю...';
 
-      for (const d of deletes) {
-        const { error } = await supabase.from('vacations')
-          .delete()
-          .eq('year', d.year)
-          .eq('month', d.month)
-          .eq('day', d.day)
-          .eq('slot', d.slot);
-        if (error) {
-          status.textContent = '❌ Ошибка при удалении данных.';
-          return;
-        }
+      if (deletions.length > 0) {
+        await Promise.all(deletions.map(([day, slot]) =>
+          supabase.from('vacations')
+            .delete()
+            .eq('year', year)
+            .eq('month', month)
+            .eq('day', day)
+            .eq('slot', slot)
+        ));
       }
 
-      if (inserts.length > 0) {
+      if (upserts.length > 0) {
         const { error } = await supabase.from('vacations')
-          .upsert(inserts, { onConflict: ['year', 'month', 'day', 'slot'] });
+          .upsert(upserts, { onConflict: ['year', 'month', 'day', 'slot'] });
         if (error) {
-          status.textContent = '❌ Ошибка при записи данных.';
+          status.textContent = '❌ Ошибка при записи.';
           return;
         }
       }
