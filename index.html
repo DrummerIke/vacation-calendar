@@ -20,6 +20,7 @@
       gap: 10px;
       margin-bottom: 20px;
       justify-content: center;
+      align-items: center;
     }
     select, button, input[type="password"] {
       padding: 10px 15px;
@@ -34,6 +35,8 @@
       background-color: #3a3330;
       border: 1px solid #777;
       color: white;
+      cursor: text;
+      width: 140px;
     }
     select {
       background-color: #3a3330;
@@ -94,8 +97,9 @@
       border-radius: 4px;
       background-color: #3a3330;
       color: #fff;
-      font-size: 10px;
+      font-size: 12px;
       box-sizing: border-box;
+      cursor: pointer;
     }
     .day-cell select option {
       background-color: #3a3330;
@@ -123,6 +127,7 @@
     <div id="calendar" class="calendar"></div>
   </div>
   <div id="status"></div>
+
   <script>
     const supabase = window.supabase.createClient(
       'https://mhtbolnovisgdliphsmf.supabase.co',
@@ -194,16 +199,13 @@
           names.forEach(name => select.appendChild(new Option(name, name)));
 
           const vac = vacations.find(v => v.day == day && v.slot == slot);
-          if (vac && vac.name) {
+          if (vac && vac.name !== "") {
             select.value = vac.name;
             cell.classList.add('filled');
-          } else {
-            select.value = "";
-            cell.classList.remove('filled');
           }
 
           select.onchange = () => {
-            if (select.value) {
+            if (select.value && select.value !== "-") {
               cell.classList.add('filled');
             } else {
               cell.classList.remove('filled');
@@ -237,13 +239,14 @@
         const day = +sel.dataset.day;
         const slot = +sel.dataset.slot;
 
-        if (val) {
+        if (val && val !== "-") {
           inserts.push({ year, month, day, slot, name: val });
         } else {
           deletes.push({ year, month, day, slot });
         }
       });
 
+      // Удаляем сначала пустые записи
       for (const d of deletes) {
         await supabase.from('vacations')
           .delete()
@@ -264,7 +267,7 @@
       }
 
       status.textContent = '✅ Данные успешно сохранены.';
-      loadCalendar();
+      await loadCalendar();
     }
 
     async function exportToExcel() {
