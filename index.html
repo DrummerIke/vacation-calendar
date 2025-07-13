@@ -37,10 +37,6 @@
       border: 1px solid #777;
       color: white;
     }
-    option {
-      background-color: white;
-      color: black;
-    }
     button:hover {
       background-color: #d65a1f;
     }
@@ -188,13 +184,13 @@
             cell.classList.add('filled');
           }
 
-          select.addEventListener('change', () => {
+          select.onchange = () => {
             if (select.value) {
               cell.classList.add('filled');
             } else {
               cell.classList.remove('filled');
             }
-          });
+          };
 
           cell.appendChild(select);
           col.appendChild(cell);
@@ -228,6 +224,7 @@
         }
       });
 
+      // Удаляем старые записи за месяц
       const { error: delErr } = await supabaseClient
         .from('vacations')
         .delete()
@@ -280,9 +277,9 @@
         return {
           Фамилия: name,
           Месяц: MONTHS[month],
-          Начало: String(days[0]).padStart(2, '0') + "." + String(month + 1).padStart(2, '0'),
-          Конец: String(days[days.length - 1]).padStart(2, '0') + "." + String(month + 1).padStart(2, '0'),
-          Дней: days.length
+          Начало: days[0],
+          Конец: days[days.length - 1],
+          'Кол-во дней': days.length
         };
       });
 
