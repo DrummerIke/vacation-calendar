@@ -114,8 +114,7 @@
   <div id="status"></div>
 
   <script>
-    const { createClient } = supabase;
-    const supabaseClient = createClient(
+    const supabaseClient = supabase.createClient(
       'https://mhtbolnovisgdliphsmf.supabase.co',
       'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1odGJvbG5vdmlzZ2RsaXBoc21mIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTE4Mjk1OTYsImV4cCI6MjA2NzQwNTU5Nn0.ureoaGoJ9Dsp6bRAGmqA9x0his3eRamYGs6fOXQOmB0'
     );
@@ -208,57 +207,51 @@
     }
 
     async function saveSelected() {
-      try {
-        const password = window.prompt("Введите пароль:");
-        if (password !== PASSWORD) {
-          status.textContent = '❌ Неверный пароль.';
+      const password = prompt("Введите пароль для записи:");
+      if (password !== PASSWORD) {
+        status.textContent = '❌ Неверный пароль.';
+        return;
+      }
+
+      const year = +yearSelect.value;
+      const month = +monthSelect.value;
+
+      const allInserts = [];
+
+      document.querySelectorAll('.day-cell select').forEach(sel => {
+        const day = +sel.dataset.day;
+        const slot = +sel.dataset.slot;
+        const name = sel.value;
+
+        allInserts.push({ year, month, day, slot, name });
+      });
+
+      // Удалить всё и перезаписать заново (упрощённая логика)
+      const { error: delErr } = await supabaseClient
+        .from('vacations')
+        .delete()
+        .eq('year', year)
+        .eq('month', month);
+
+      if (delErr) {
+        status.textContent = '❌ Ошибка при удалении.';
+        return;
+      }
+
+      const filtered = allInserts.filter(i => i.name);
+      if (filtered.length > 0) {
+        const { error: upErr } = await supabaseClient
+          .from('vacations')
+          .insert(filtered);
+
+        if (upErr) {
+          status.textContent = '❌ Ошибка при записи.';
           return;
         }
-
-        const year = +yearSelect.value;
-        const month = +monthSelect.value;
-
-        const inserts = [], deletes = [];
-
-        document.querySelectorAll('.day-cell select').forEach(sel => {
-          const val = sel.value;
-          const day = +sel.dataset.day;
-          const slot = +sel.dataset.slot;
-
-          if (val) {
-            inserts.push({ year, month, day, slot, name: val });
-          } else {
-            deletes.push({ year, month, day, slot });
-          }
-        });
-
-        for (const d of deletes) {
-          await supabaseClient
-            .from('vacations')
-            .delete()
-            .eq('year', d.year)
-            .eq('month', d.month)
-            .eq('day', d.day)
-            .eq('slot', d.slot);
-        }
-
-        if (inserts.length > 0) {
-          const { error } = await supabaseClient
-            .from('vacations')
-            .upsert(inserts, { onConflict: ['year', 'month', 'day', 'slot'] });
-
-          if (error) {
-            status.textContent = '❌ Ошибка при записи.';
-            return;
-          }
-        }
-
-        status.textContent = '✅ Данные успешно сохранены.';
-        await loadCalendar();
-      } catch (err) {
-        status.textContent = '❌ Ошибка при записи.';
-        console.error(err);
       }
+
+      status.textContent = '✅ Данные сохранены.';
+      await loadCalendar();
     }
 
     async function exportToExcel() {
