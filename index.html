@@ -37,9 +37,9 @@
       border: 1px solid #777;
       color: white;
     }
-    select option {
-      background-color: #fff;
-      color: #000;
+    option {
+      background-color: white;
+      color: black;
     }
     button:hover {
       background-color: #d65a1f;
@@ -93,10 +93,6 @@
       color: #000;
       font-size: 14px;
       box-sizing: border-box;
-    }
-    .day-cell select option {
-      background-color: #fff;
-      color: #000;
     }
     #status {
       margin-top: 20px;
@@ -283,8 +279,9 @@
         days.sort((a, b) => a - b);
         return {
           Фамилия: name,
-          "Отпуск с": `${days[0].toString().padStart(2, '0')}.${(month+1).toString().padStart(2, '0')}.${year}`,
-          "по": `${days[days.length - 1].toString().padStart(2, '0')}.${(month+1).toString().padStart(2, '0')}.${year}`,
+          Месяц: MONTHS[month],
+          Начало: String(days[0]).padStart(2, '0') + "." + String(month + 1).padStart(2, '0'),
+          Конец: String(days[days.length - 1]).padStart(2, '0') + "." + String(month + 1).padStart(2, '0'),
           Дней: days.length
         };
       });
