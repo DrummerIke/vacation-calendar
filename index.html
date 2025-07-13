@@ -26,26 +26,22 @@
       font-size: 16px;
       border-radius: 8px;
       border: none;
+      background-color: #ef6f2e;
+      color: white;
       cursor: pointer;
     }
     input[type="password"] {
       background-color: #3a3330;
       border: 1px solid #777;
       color: white;
-      width: 120px;
     }
     select {
       background-color: #3a3330;
       border: 1px solid #777;
       color: white;
-      min-width: 140px;
     }
     select option {
       background-color: #3a3330;
-      color: white;
-    }
-    button {
-      background-color: #ef6f2e;
       color: white;
     }
     button:hover {
@@ -87,12 +83,9 @@
       display: flex;
       justify-content: center;
       align-items: center;
-      font-size: 14px;
     }
     .day-cell.filled {
       background-color: #ef6f2e !important;
-      color: black;
-      font-weight: 600;
     }
     .day-cell select {
       width: 100%;
@@ -100,10 +93,9 @@
       border: none;
       border-radius: 4px;
       background-color: #3a3330;
-      color: white;
-      font-size: 14px;
+      color: #fff;
+      font-size: 12px;
       box-sizing: border-box;
-      cursor: pointer;
     }
     .day-cell select option {
       background-color: #3a3330;
@@ -132,11 +124,10 @@
     <div id="calendar" class="calendar"></div>
   </div>
   <div id="status"></div>
-
   <script>
     const supabase = window.supabase.createClient(
       'https://mhtbolnovisgdliphsmf.supabase.co',
-      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1odGJvbG5vdmlzZ2xpcGhzbWYiLCJyb2xlIjoiYW5vbiIsImlhdCI6MTc1MTgyOTU5NiwiZXhwIjoyMDY3NDA1NTk2fQ.ureoaGoJ9Dsp6bRAGmqA9x0his3eRamYGs6fOXQOmB0'
+      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1odGJvbG5vdmlzZ2RsaXBoc21mIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTE4Mjk1OTYsImV4cCI6MjA2NzQwNTU5Nn0.ureoaGoJ9Dsp6bRAGmqA9x0his3eRamYGs6fOXQOmB0'
     );
 
     const PASSWORD = "06062025";
@@ -166,69 +157,65 @@
       calendarContainer.innerHTML = '';
       status.textContent = 'Загружаю...';
 
-      try {
-        const [namesRes, vacsRes] = await Promise.all([
-          supabase.from('employees').select('name'),
-          supabase.from('vacations').select('*').eq('year', year).eq('month', month),
-        ]);
+      const [namesRes, vacsRes] = await Promise.all([
+        supabase.from('employees').select('name'),
+        supabase.from('vacations').select('*').eq('year', year).eq('month', month),
+      ]);
 
-        if (namesRes.error || vacsRes.error) {
-          status.textContent = '❌ Ошибка при загрузке данных';
-          return;
-        }
+      if (namesRes.error || vacsRes.error) {
+        status.textContent = '❌ Ошибка при загрузке данных';
+        return;
+      }
 
-        names = namesRes.data.map(n => n.name);
-        vacations = vacsRes.data;
+      names = namesRes.data.map(n => n.name);
+      vacations = vacsRes.data;
 
-        const days = new Date(year, month + 1, 0).getDate();
+      const days = new Date(year, month + 1, 0).getDate();
 
-        for (let day = 1; day <= days; day++) {
-          const col = document.createElement('div');
-          col.className = 'day-column';
+      for (let day = 1; day <= days; day++) {
+        const col = document.createElement('div');
+        col.className = 'day-column';
 
-          const header = document.createElement('div');
-          header.className = 'day-header';
-          header.textContent = day;
-          const dayOfWeek = new Date(year, month, day).getDay();
-          if (dayOfWeek === 0 || dayOfWeek === 6) header.classList.add('weekend');
-          col.appendChild(header);
+        const header = document.createElement('div');
+        header.className = 'day-header';
+        header.textContent = day;
+        const dayOfWeek = new Date(year, month, day).getDay();
+        if (dayOfWeek === 0 || dayOfWeek === 6) header.classList.add('weekend');
+        col.appendChild(header);
 
-          for (let slot = 0; slot < 7; slot++) {
-            const cell = document.createElement('div');
-            cell.className = 'day-cell';
+        for (let slot = 0; slot < 7; slot++) {
+          const cell = document.createElement('div');
+          cell.className = 'day-cell';
 
-            const select = document.createElement('select');
-            select.dataset.day = day;
-            select.dataset.slot = slot;
+          const select = document.createElement('select');
+          select.dataset.day = day;
+          select.dataset.slot = slot;
 
-            select.appendChild(new Option("-", ""));
-            names.forEach(name => select.appendChild(new Option(name, name)));
+          select.appendChild(new Option("-", ""));
+          names.forEach(name => select.appendChild(new Option(name, name)));
 
-            const vac = vacations.find(v => v.day === day && v.slot === slot);
-            if (vac && vac.name && vac.name !== "") {
-              select.value = vac.name;
-              cell.classList.add('filled');
-            }
-
-            select.onchange = () => {
-              if (select.value && select.value !== "-") {
-                cell.classList.add('filled');
-              } else {
-                cell.classList.remove('filled');
-              }
-            };
-
-            cell.appendChild(select);
-            col.appendChild(cell);
+          const vac = vacations.find(v => v.day == day && v.slot == slot);
+          if (vac) {
+            select.value = vac.name;
+            cell.classList.add('filled');  // <- Вот тут добавляем оранжевую заливку
           }
 
-          calendarContainer.appendChild(col);
+          select.onchange = () => {
+            if (select.value && select.value !== '-') {
+              cell.classList.add('filled');
+            } else {
+              cell.classList.remove('filled');
+            }
+          };
+
+          cell.appendChild(select);
+          col.appendChild(cell);
         }
 
-        status.textContent = '✅ Данные загружены.';
-      } catch (e) {
-        status.textContent = '❌ Ошибка: ' + e.message;
+        calendarContainer.appendChild(col);
       }
+
+      status.textContent = '✅ Данные загружены';
     }
 
     async function saveSelected() {
@@ -248,38 +235,40 @@
         const day = +sel.dataset.day;
         const slot = +sel.dataset.slot;
 
-        if (val && val !== "-") {
+        if (val && val !== '-') {
           inserts.push({ year, month, day, slot, name: val });
         } else {
           deletes.push({ year, month, day, slot });
         }
       });
 
-      try {
-        for (const d of deletes) {
-          await supabase.from('vacations')
-            .delete()
-            .eq('year', d.year)
-            .eq('month', d.month)
-            .eq('day', d.day)
-            .eq('slot', d.slot);
+      status.textContent = 'Сохраняю...';
+
+      for (const d of deletes) {
+        const { error } = await supabase.from('vacations')
+          .delete()
+          .eq('year', d.year)
+          .eq('month', d.month)
+          .eq('day', d.day)
+          .eq('slot', d.slot);
+        if (error) {
+          status.textContent = '❌ Ошибка при удалении';
+          return;
         }
-
-        if (inserts.length > 0) {
-          const { error } = await supabase.from('vacations')
-            .upsert(inserts, { onConflict: ['year', 'month', 'day', 'slot'] });
-
-          if (error) {
-            status.textContent = '❌ Ошибка при записи: ' + error.message;
-            return;
-          }
-        }
-
-        status.textContent = '✅ Данные успешно сохранены.';
-        await loadCalendar();
-      } catch(e) {
-        status.textContent = '❌ Ошибка: ' + e.message;
       }
+
+      if (inserts.length > 0) {
+        const { error } = await supabase.from('vacations')
+          .upsert(inserts, { onConflict: ['year', 'month', 'day', 'slot'] });
+
+        if (error) {
+          status.textContent = '❌ Ошибка при записи';
+          return;
+        }
+      }
+
+      status.textContent = '✅ Данные успешно сохранены.';
+      loadCalendar();
     }
 
     async function exportToExcel() {
@@ -299,9 +288,8 @@
 
       const grouped = {};
       data.forEach(v => {
-        const key = v.name;
-        if (!grouped[key]) grouped[key] = [];
-        grouped[key].push(v.day);
+        if (!grouped[v.name]) grouped[v.name] = [];
+        grouped[v.name].push(v.day);
       });
 
       const rows = Object.entries(grouped).map(([name, days]) => {
