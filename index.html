@@ -28,8 +28,6 @@
       font-size: 16px;
       border-radius: 8px;
       border: none;
-      background-color: #ef6f2e;
-      color: white;
       cursor: pointer;
     }
     input[type="password"] {
@@ -43,8 +41,16 @@
       color: white;
     }
     select option {
-      background-color: #fff;
-      color: #000;
+      background-color: #3a3330;
+      color: white;
+    }
+    select option:hover, select option:focus {
+      background-color: #555;
+      color: white;
+    }
+    button {
+      background-color: #ef6f2e;
+      color: white;
     }
     button:hover {
       background-color: #d65a1f;
@@ -80,33 +86,38 @@
       background-color: #3a3330;
     }
     .day-cell {
-      background-color: #5c534f;
+      background-color: #5c534f; /* серый фон */
       border-radius: 5px;
       display: flex;
       justify-content: center;
       align-items: center;
     }
     .day-cell.filled {
-      background-color: #ef6f2e !important;
+      background-color: #ef6f2e !important; /* оранжевая заливка */
     }
     .day-cell select {
       width: 100%;
       height: 100%;
       border: none;
       border-radius: 4px;
-      background-color: #fff;
-      color: #000;
+      background-color: #3a3330; /* серый фон выпадающего */
+      color: white; /* белый текст */
       font-size: 14px;
       box-sizing: border-box;
+      appearance: none;
+      -webkit-appearance: none;
+      -moz-appearance: none;
+      padding-left: 5px;
     }
     .day-cell select option {
-      background-color: #fff;
-      color: #000;
+      background-color: #3a3330; /* серый фон опций */
+      color: white; /* белый текст */
     }
     #status {
       margin-top: 20px;
       font-weight: bold;
       text-align: center;
+      min-height: 24px;
     }
   </style>
 </head>
@@ -139,6 +150,7 @@
 
     let names = [], vacations = [];
 
+    // Заполняем селекты месяца и года
     MONTHS.forEach((m, i) => monthSelect.appendChild(new Option(m, i)));
     for (let y = 2025; y <= 2029; y++) yearSelect.appendChild(new Option(y, y));
 
@@ -226,7 +238,8 @@
       const year = +yearSelect.value;
       const month = +monthSelect.value;
 
-      const allInserts = [];
+      const inserts = [];
+      const deletes = [];
 
       document.querySelectorAll('.day-cell select').forEach(sel => {
         const day = +sel.dataset.day;
@@ -234,10 +247,13 @@
         const name = sel.value;
 
         if (name) {
-          allInserts.push({ year, month, day, slot, name });
+          inserts.push({ year, month, day, slot, name });
+        } else {
+          deletes.push({ year, month, day, slot });
         }
       });
 
+      // Удаляем все записи за месяц и год, затем вставляем новые
       const { error: delErr } = await supabaseClient
         .from('vacations')
         .delete()
@@ -249,10 +265,10 @@
         return;
       }
 
-      if (allInserts.length > 0) {
+      if (inserts.length > 0) {
         const { error: upErr } = await supabaseClient
           .from('vacations')
-          .insert(allInserts);
+          .insert(inserts);
 
         if (upErr) {
           status.textContent = '❌ Ошибка при записи.';
