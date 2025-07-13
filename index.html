@@ -84,9 +84,6 @@
       justify-content: center;
       align-items: center;
     }
-    .day-cell.filled {
-      background-color: #ef6f2e !important;
-    }
     .day-cell select {
       width: 100%;
       height: 100%;
@@ -198,16 +195,11 @@
             select.value = vac.name;
           }
 
-          if (select.value !== "") {
-            cell.classList.add('filled');
-          }
+          // применяем фон прямо к select
+          select.style.backgroundColor = select.value !== "" ? "#ef6f2e" : "#3a3330";
 
           select.onchange = () => {
-            if (select.value !== "") {
-              cell.classList.add('filled');
-            } else {
-              cell.classList.remove('filled');
-            }
+            select.style.backgroundColor = select.value !== "" ? "#ef6f2e" : "#3a3330";
           };
 
           cell.appendChild(select);
