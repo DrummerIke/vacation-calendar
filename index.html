@@ -16,7 +16,6 @@
       flex-direction: column;
       align-items: center;
     }
-
     .controls {
       display: flex;
       flex-wrap: wrap;
@@ -24,8 +23,7 @@
       margin-bottom: 20px;
       justify-content: center;
     }
-
-    select, button {
+    select, button, input[type="password"] {
       padding: 10px 15px;
       font-size: 16px;
       border-radius: 8px;
@@ -34,22 +32,23 @@
       color: white;
       cursor: pointer;
     }
-
+    input[type="password"] {
+      background-color: #3a3330;
+      border: 1px solid #777;
+      color: white;
+    }
     select {
       background-color: #3a3330;
       border: 1px solid #777;
       color: white;
     }
-
     select option {
       background-color: #fff;
       color: #000;
     }
-
     button:hover {
       background-color: #d65a1f;
     }
-
     .calendar-wrapper {
       width: 100%;
       overflow-x: auto;
@@ -58,21 +57,18 @@
       border-radius: 10px;
       max-width: 100%;
     }
-
     .calendar {
       display: grid;
       grid-auto-flow: column;
       grid-auto-columns: minmax(100px, 1fr);
       gap: 5px;
     }
-
     .day-column {
       display: grid;
       grid-template-rows: repeat(8, 40px);
       gap: 5px;
       min-width: 100px;
     }
-
     .day-header {
       background-color: #4b423f;
       text-align: center;
@@ -80,11 +76,9 @@
       border-radius: 5px;
       line-height: 40px;
     }
-
     .day-header.weekend {
       background-color: #3a3330;
     }
-
     .day-cell {
       background-color: #5c534f;
       border-radius: 5px;
@@ -92,11 +86,9 @@
       justify-content: center;
       align-items: center;
     }
-
     .day-cell.filled {
       background-color: #ef6f2e !important;
     }
-
     .day-cell select {
       width: 100%;
       height: 100%;
@@ -107,12 +99,10 @@
       font-size: 14px;
       box-sizing: border-box;
     }
-
     .day-cell select option {
       background-color: #fff;
       color: #000;
     }
-
     #status {
       margin-top: 20px;
       font-weight: bold;
@@ -121,23 +111,20 @@
   </style>
 </head>
 <body>
-
   <div class="controls">
     <select id="month-select"></select>
     <select id="year-select"></select>
+    <input id="password-input" type="password" placeholder="Введите пароль" />
     <button id="load-btn">Показать</button>
     <button id="save-btn">Записать</button>
     <button id="export-btn">Excel</button>
   </div>
-
   <div class="calendar-wrapper">
     <div id="calendar" class="calendar"></div>
   </div>
-
   <div id="status"></div>
-
   <script>
-    const supabase = supabase.createClient(
+    const supabaseClient = supabase.createClient(
       'https://mhtbolnovisgdliphsmf.supabase.co',
       'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1odGJvbG5vdmlzZ2RsaXBoc21mIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTE4Mjk1OTYsImV4cCI6MjA2NzQwNTU5Nn0.ureoaGoJ9Dsp6bRAGmqA9x0his3eRamYGs6fOXQOmB0'
     );
@@ -169,8 +156,8 @@
       status.textContent = '⏳ Загружаю...';
 
       const [namesRes, vacsRes] = await Promise.all([
-        supabase.from('employees').select('name'),
-        supabase.from('vacations').select('*').eq('year', year).eq('month', month),
+        supabaseClient.from('employees').select('name'),
+        supabaseClient.from('vacations').select('*').eq('year', year).eq('month', month),
       ]);
 
       if (namesRes.error || vacsRes.error) {
@@ -230,7 +217,7 @@
     }
 
     async function saveSelected() {
-      const password = prompt("Введите пароль для записи:");
+      const password = document.getElementById('password-input').value.trim();
       if (password !== PASSWORD) {
         status.textContent = '❌ Неверный пароль.';
         return;
@@ -239,19 +226,19 @@
       const year = +yearSelect.value;
       const month = +monthSelect.value;
 
-      const inserts = [];
+      const allInserts = [];
 
       document.querySelectorAll('.day-cell select').forEach(sel => {
-        const val = sel.value;
         const day = +sel.dataset.day;
         const slot = +sel.dataset.slot;
+        const name = sel.value;
 
-        if (val) {
-          inserts.push({ year, month, day, slot, name: val });
+        if (name) {
+          allInserts.push({ year, month, day, slot, name });
         }
       });
 
-      const { error: delErr } = await supabase
+      const { error: delErr } = await supabaseClient
         .from('vacations')
         .delete()
         .eq('year', year)
@@ -262,12 +249,12 @@
         return;
       }
 
-      if (inserts.length > 0) {
-        const { error: insErr } = await supabase
+      if (allInserts.length > 0) {
+        const { error: upErr } = await supabaseClient
           .from('vacations')
-          .insert(inserts);
+          .insert(allInserts);
 
-        if (insErr) {
+        if (upErr) {
           status.textContent = '❌ Ошибка при записи.';
           return;
         }
@@ -281,7 +268,7 @@
       const year = +yearSelect.value;
       const month = +monthSelect.value;
 
-      const { data, error } = await supabase
+      const { data, error } = await supabaseClient
         .from('vacations')
         .select('*')
         .eq('year', year)
