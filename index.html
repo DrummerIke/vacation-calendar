@@ -98,7 +98,6 @@
   </style>
 </head>
 <body>
-
   <div class="controls">
     <select id="month-select"></select>
     <select id="year-select"></select>
@@ -106,13 +105,10 @@
     <button id="save-btn">Записать</button>
     <button id="export-btn">Excel</button>
   </div>
-
   <div class="calendar-wrapper">
     <div id="calendar" class="calendar"></div>
   </div>
-
   <div id="status"></div>
-
   <script>
     const supabaseClient = supabase.createClient(
       'https://mhtbolnovisgdliphsmf.supabase.co',
@@ -223,10 +219,11 @@
         const slot = +sel.dataset.slot;
         const name = sel.value;
 
-        allInserts.push({ year, month, day, slot, name });
+        if (name) {
+          allInserts.push({ year, month, day, slot, name });
+        }
       });
 
-      // Удалить всё и перезаписать заново (упрощённая логика)
       const { error: delErr } = await supabaseClient
         .from('vacations')
         .delete()
@@ -238,11 +235,10 @@
         return;
       }
 
-      const filtered = allInserts.filter(i => i.name);
-      if (filtered.length > 0) {
+      if (allInserts.length > 0) {
         const { error: upErr } = await supabaseClient
           .from('vacations')
-          .insert(filtered);
+          .insert(allInserts);
 
         if (upErr) {
           status.textContent = '❌ Ошибка при записи.';
@@ -269,13 +265,21 @@
         return;
       }
 
-      const rows = data.map(d => ({
-        Год: d.year,
-        Месяц: MONTHS[d.month],
-        День: d.day,
-        Слот: d.slot,
-        Имя: d.name
-      }));
+      const grouped = {};
+      data.forEach(({ name, day }) => {
+        if (!grouped[name]) grouped[name] = [];
+        grouped[name].push(day);
+      });
+
+      const rows = Object.entries(grouped).map(([name, days]) => {
+        days.sort((a, b) => a - b);
+        return {
+          Фамилия: name,
+          Месяц: MONTHS[month],
+          Начало: days[0],
+          Конец: days[days.length - 1]
+        };
+      });
 
       const ws = XLSX.utils.json_to_sheet(rows);
       const wb = XLSX.utils.book_new();
