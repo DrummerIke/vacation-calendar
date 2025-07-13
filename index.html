@@ -37,6 +37,10 @@
       border: 1px solid #777;
       color: white;
     }
+    select option {
+      background-color: #fff;
+      color: #000;
+    }
     button:hover {
       background-color: #d65a1f;
     }
@@ -85,10 +89,14 @@
       height: 100%;
       border: none;
       border-radius: 4px;
-      background-color: transparent;
-      color: #fff;
+      background-color: #fff;
+      color: #000;
       font-size: 14px;
       box-sizing: border-box;
+    }
+    .day-cell select option {
+      background-color: #fff;
+      color: #000;
     }
     #status {
       margin-top: 20px;
@@ -273,14 +281,11 @@
 
       const rows = Object.entries(grouped).map(([name, days]) => {
         days.sort((a, b) => a - b);
-        const start = days[0];
-        const end = days[days.length - 1];
         return {
           Фамилия: name,
-          Месяц: MONTHS[month],
-          "Отпуск с": `${start.toString().padStart(2, '0')}.${(month + 1).toString().padStart(2, '0')}`,
-          "по": `${end.toString().padStart(2, '0')}.${(month + 1).toString().padStart(2, '0')}`,
-          "Дней": end - start + 1
+          "Отпуск с": `${days[0].toString().padStart(2, '0')}.${(month+1).toString().padStart(2, '0')}.${year}`,
+          "по": `${days[days.length - 1].toString().padStart(2, '0')}.${(month+1).toString().padStart(2, '0')}.${year}`,
+          Дней: days.length
         };
       });
 
